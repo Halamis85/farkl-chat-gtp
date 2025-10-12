@@ -3,12 +3,12 @@
 importer="oggvorbisstr"
 type="AudioStreamOggVorbis"
 uid="uid://bp8ormb4errem"
-path="res://.godot/imported/dice_stop.ogg-24444c26869f566bdfc4b12c728103d8.oggvorbisstr"
+path="res://.godot/imported/dice_stop.ogg-3accc15d8b7a5a22feb1c0dbb6cf598c.oggvorbisstr"
 
 [deps]
 
-source_file="res://assets/audio/sfx/dice_stop.ogg"
-dest_files=["res://.godot/imported/dice_stop.ogg-24444c26869f566bdfc4b12c728103d8.oggvorbisstr"]
+source_file="res://audio/sfx/dice_stop.ogg"
+dest_files=["res://.godot/imported/dice_stop.ogg-3accc15d8b7a5a22feb1c0dbb6cf598c.oggvorbisstr"]
 
 [params]
 

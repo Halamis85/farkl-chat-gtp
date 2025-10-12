@@ -1,4 +1,4 @@
-[gd_scene load_steps=25 format=3 uid="uid://b7m7h4qtofick"]
+[gd_scene load_steps=29 format=3 uid="uid://b7m7h4qtofick"]
 
 [ext_resource type="Script" uid="uid://xahqtpywrhur" path="res://scripts/DiceManager.gd" id="2_0wfyh"]
 [ext_resource type="Material" uid="uid://sw3c6bdtt7nn" path="res://Addons/wood_table_worn.tres" id="2_tipki"]
@@ -9,7 +9,10 @@
 [ext_resource type="Material" uid="uid://c31e6cfikugb6" path="res://Addons/wood_cabinet_worn_long.tres" id="8_85g3d"]
 [ext_resource type="Script" uid="uid://14rx34dnef1j" path="res://scripts/dice_cup.gd" id="8_choun"]
 [ext_resource type="Script" uid="uid://dnlh0qdi4ux0n" path="res://scripts/audio_manager.gd" id="8_eb6dy"]
+[ext_resource type="AudioStream" uid="uid://d325qh0udb7g0" path="res://audio/sfx/dice_roll.ogg" id="8_trceg"]
+[ext_resource type="AudioStream" uid="uid://c4mrlpqi87jgx" path="res://audio/sfx/button_click.ogg" id="9_a8y0u"]
 [ext_resource type="Script" uid="uid://c06qq7i0o6ndu" path="res://scripts/camera_controller.gd" id="9_ya4ey"]
+[ext_resource type="AudioStream" uid="uid://dblw44wbqamsc" path="res://audio/sfx/dice_shake.ogg" id="10_a8y0u"]
 [ext_resource type="PackedScene" uid="uid://caayhiwyisq3k" path="res://Addons/kelimek.glb" id="11_ya4ey"]
 
 [sub_resource type="BoxMesh" id="BoxMesh_sgp6g"]
@@ -55,6 +58,11 @@ size = Vector3(22, 10, 0.5)
 [sub_resource type="BoxMesh" id="BoxMesh_tipki"]
 material = ExtResource("8_85g3d")
 size = Vector3(50, 10, 30)
+
+[sub_resource type="AudioStreamSynchronized" id="AudioStreamSynchronized_a8y0u"]
+stream_count = 1
+stream_0/stream = ExtResource("10_a8y0u")
+stream_0/volume = 0.0
 
 [node name="Main" type="Node3D"]
 script = ExtResource("8_choun")
@@ -149,6 +157,9 @@ script = ExtResource("7_ya4ey")
 
 [node name="AudioManager" type="Node" parent="."]
 script = ExtResource("8_eb6dy")
+dice_roll_sounds = Array[AudioStream]([ExtResource("8_trceg")])
+button_click_sound = ExtResource("9_a8y0u")
+cup_shake_sounds = Array[AudioStream]([SubResource("AudioStreamSynchronized_a8y0u")])
 
 [node name="GameManager" type="Node" parent="."]
 script = ExtResource("3_tbgi4")

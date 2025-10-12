@@ -2,7 +2,7 @@ extends Node3D
 
 signal all_dice_stopped(values: Array)
 signal dice_rolling_started
-signal cup_animation_complete()
+# signal cup_animation_complete()  # Nepoužitý signál
 
 const DICE_SCENE = preload("res://scenes/dice.tscn")
 const NUM_DICE = 6
@@ -25,7 +25,7 @@ var use_cup_animation: bool = true  # Zapni/vypni animace kelímku
 var use_camera_animations: bool = true  # Zapni/vypni pohyby kamery
 
 # Pozice pro házení kostek
-var spawn_position = Vector3(-15, 3, 0)
+var spawn_position = Vector3(0, 3, 0)
 var spawn_spread = 2.0
 
 func _ready():
@@ -127,33 +127,40 @@ func roll_all_dice(banked_indices: Array = []):
 		perform_classic_roll(dice_to_roll_indices)
 
 func perform_cup_animation(indices: Array):
-	"""Animace s kelímkem"""
-	print("🥤 Spouštím animaci kelímku...")
+	"""Animace s kelímkem - nová verze s hozením"""
+	print("🥤 Spouštím animaci házení...")
 	
 	# Zvuk kelímku
 	if audio_manager and audio_manager.has_method("play_cup_shake"):
 		audio_manager.play_cup_shake()
 	
-	# Kamera na kelímek
+	# Kamera na kelímek (stranou)
 	if camera and camera.has_method("move_to_shake_view") and use_camera_animations:
 		camera.move_to_shake_view()
-		await get_tree().create_timer(0.5).timeout  # Počkej než kamera dorazí
+		await get_tree().create_timer(0.3).timeout
 	
-	# Zatřes a vysyp
-	if dice_cup and dice_cup.has_method("shake_and_pour"):
-		dice_cup.shake_and_pour()
+	# Zatřes a hoď - OPRAVENÝ s await
+	if dice_cup and dice_cup.has_method("shake_and_throw"):
+		# Spusť animaci kelímku (bez await - běží paralelně)
+		dice_cup.shake_and_throw()
+		
+		# Čekáme na signál dice_released
 		await dice_cup.dice_released
 		
 		# ZOBRAZ kostky při vysypání a dej jim impulz
 		show_and_throw_dice(indices)
+	else:
+		print("⚠️ Kelímek nemá metodu shake_and_throw!")
+		# Fallback - klasické házení
+		perform_classic_roll(indices)
 	
-	# Kamera na kostky - počkej chvíli až dopadnou
-	await get_tree().create_timer(0.6).timeout
+	# Kamera na kostky - rychle
+	await get_tree().create_timer(0.4).timeout
 	if camera and camera.has_method("move_to_focused") and use_camera_animations:
 		camera.move_to_focused()
 		
 	# Camera shake efekt při dopadu
-	await get_tree().create_timer(0.4).timeout
+	await get_tree().create_timer(0.5).timeout
 	if camera and camera.has_method("add_camera_shake"):
 		camera.add_camera_shake(0.2, 0.5)
 
@@ -192,7 +199,7 @@ func show_and_throw_dice(indices: Array):
 	
 	# Pozice kelímku (odkud se kostky vysypou)
 	var cup_position = dice_cup.global_position if dice_cup else Vector3(0, 3, 0)
-	var throw_origin = cup_position + Vector3(1.5, 0, 0.5)
+	var throw_origin = cup_position + Vector3(1.0, -0.5, 0)  # Trochu před kelímkem a níž
 	
 	for i in range(indices.size()):
 		var idx = indices[i]
@@ -205,20 +212,21 @@ func show_and_throw_dice(indices: Array):
 			
 			# Nastav pozici blízko kelímku (jako by vylétly)
 			var spread = Vector3(
-				randf_range(-0.5, 0.5),
-				randf_range(0, 0.3),
-				randf_range(-0.5, 0.5)
+				randf_range(-0.4, 0.4),
+				randf_range(-0.2, 0.2),
+				randf_range(-0.4, 0.4)
 			)
 			dice.global_position = throw_origin + spread
 			
-			# Dej jim silný impulz jako by vylétly z kelímku
-			var throw_direction = Vector3(
-				randf_range(-1.5, 0.5),  # Dolů po směru kelímku
-				randf_range(-1.0, -0.3),  # Trochu dolů
-				randf_range(-1.0, 1.0)   # Náhodně do stran
-			).normalized()
+			# Dej jim silný impulz směrem dolů a na střed stolu
+			var to_center = (Vector3(0, 0, 0) - throw_origin).normalized()
+			var throw_direction = (to_center + Vector3(
+				randf_range(-0.3, 0.3),
+				randf_range(-0.5, -0.2),  # Dolů
+				randf_range(-0.3, 0.3)
+			)).normalized()
 			
-			var throw_force = randf_range(8.0, 12.0)  # Silnější hod
+			var throw_force = randf_range(9.0, 13.0)  # Silnější hod
 			dice.linear_velocity = throw_direction * throw_force
 			
 			# Silná náhodná rotace
@@ -288,7 +296,7 @@ func reset_positions():
 	"""Resetuj pozice kostek"""
 	for i in range(dice_array.size()):
 		var dice = dice_array[i]
-		var row = i / 3  # Řádek (0 nebo 1)
+		var row = i / 3.0  # Řádek (0 nebo 1)
 		var col = i % 3  # Sloupec (0, 1, nebo 2)
 		var offset = Vector3(
 			float(col - 1) * 1.5,
@@ -356,9 +364,7 @@ func clear_selection():
 	# Skryj všechny kostky zpět do kelímku
 	hide_all_dice()
 	
-	# Zobraz kelímek zpět
-	if dice_cup and dice_cup.has_method("show_cup"):
-		dice_cup.show_cup()
+	# Kelímek zůstává na rest_position, není potřeba ho zobrazovat
 	
 	print("🔄 Reset všech kostek - schované v kelímku")
 

@@ -3,12 +3,12 @@
 importer="oggvorbisstr"
 type="AudioStreamOggVorbis"
 uid="uid://duo3gcgiha4ka"
-path="res://.godot/imported/farkle.ogg-b6d7942570fdd2ec0c9295c523e363f8.oggvorbisstr"
+path="res://.godot/imported/farkle.ogg-b3c2e0bc42fc04b97877230bc19faf13.oggvorbisstr"
 
 [deps]
 
-source_file="res://assets/audio/sfx/farkle.ogg"
-dest_files=["res://.godot/imported/farkle.ogg-b6d7942570fdd2ec0c9295c523e363f8.oggvorbisstr"]
+source_file="res://audio/sfx/farkle.ogg"
+dest_files=["res://.godot/imported/farkle.ogg-b3c2e0bc42fc04b97877230bc19faf13.oggvorbisstr"]
 
 [params]
 
