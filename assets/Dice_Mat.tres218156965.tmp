@@ -1,0 +1,16 @@
+[gd_resource type="StandardMaterial3D" load_steps=4 format=3 uid="uid://caiin0jr5y11q"]
+
+[ext_resource type="Texture2D" uid="uid://8wg4n0i8pp8x" path="res://assets/dice_0.png" id="1_gdaow"]
+[ext_resource type="Texture2D" uid="uid://wtbkrvrn218f" path="res://assets/dice_1.png" id="2_wpqrf"]
+[ext_resource type="Texture2D" uid="uid://quy7ah04hwjo" path="res://assets/dice_2.png" id="3_ygj2e"]
+
+[resource]
+resource_name = "Dice_Mat"
+cull_mode = 2
+albedo_texture = ExtResource("1_gdaow")
+metallic_texture = ExtResource("2_wpqrf")
+metallic_texture_channel = 2
+roughness_texture = ExtResource("2_wpqrf")
+roughness_texture_channel = 1
+normal_enabled = true
+normal_texture = ExtResource("3_ygj2e")

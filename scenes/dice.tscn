@@ -1,0 +1,41 @@
+[gd_scene load_steps=5 format=3 uid="uid://bntn01vryh7dp"]
+
+[ext_resource type="PackedScene" uid="uid://2w0sqefodhph" path="res://Addons/dice.glb" id="1_27nyo"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_mg5ex"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_27nyo"]
+transparency = 1
+albedo_color = Color(255, 215, 1, 1)
+albedo_texture_msdf = true
+emission_enabled = true
+emission = Color(3.2944162, 0.5927219, 0, 1)
+
+[sub_resource type="TorusMesh" id="TorusMesh_mg5ex"]
+material = SubResource("StandardMaterial3D_27nyo")
+inner_radius = 1.3
+outer_radius = 1.2
+rings = 127
+ring_segments = 8
+
+[node name="Dice" instance=ExtResource("1_27nyo")]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="." index="0"]
+shape = SubResource("BoxShape3D_mg5ex")
+
+[node name="Sketchfab_model" parent="." index="1"]
+transform = Transform3D(0.9, 0, 0, 0, -3.934025e-08, 0.9, 0, -0.9, -3.934025e-08, 0, 0, 0)
+
+[node name="4232112a6fd94e12b113522595c30aed_fbx" parent="Sketchfab_model" index="0"]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, -1, 0, 1, -4.371139e-08, 0, 0, 0)
+
+[node name="RootNode" parent="Sketchfab_model/4232112a6fd94e12b113522595c30aed_fbx" index="0"]
+transform = Transform3D(0.5, 0, 0, 0, 0.5, 0, 0, 0, 0.5, 0, 0, 0)
+
+[node name="high poly_004" parent="Sketchfab_model/4232112a6fd94e12b113522595c30aed_fbx/RootNode" index="0"]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 0, 0, 0)
+
+[node name="SelectionRing" type="MeshInstance3D" parent="." index="2"]
+transform = Transform3D(1.0000001, 0, 0, 0, 1.0000001, 0, 0, 0, 1, 0, 0, 0)
+visible = false
+mesh = SubResource("TorusMesh_mg5ex")
