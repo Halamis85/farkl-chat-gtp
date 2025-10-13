@@ -1,238 +1,201 @@
 extends Node3D
 
 signal shake_complete()
-signal dice_released()
+signal dice_released(release_position: Vector3)  # Posílá pozici kde vysypat
 
 @export var shake_duration: float = 1.0
 @export var shake_intensity: float = 0.3
 @export var throw_duration: float = 0.8
-@export var shake_sounds: Array[AudioStream] = []  # Přidej zvuky třesení
-@export var dice_spawn_offset: Vector3 = Vector3(0, 1, 0)  # Pozice odkud se kostky vysypou
-@export var rest_position: Vector3 = Vector3(15, 0, 0)  # Pozice kelímku mimo hru
-@export var throw_target: Vector3 = Vector3(0, 0, 0)  # Kam se hází (střed stolu)
+@export var shake_sounds: Array[AudioStream] = []
+@export var rest_position: Vector3 = Vector3(15, 0, 0)
+@export var throw_target: Vector3 = Vector3(0, 0, 0)
+@export var arc_height: float = 4.0
+@export_range(0.0, 1.0) var release_timing: float = 0.3  # Kdy vysypat kostky (0-1)
 
 var is_shaking: bool = false
-var original_position: Vector3
-var original_rotation: Vector3
-var is_hidden: bool = false
-
-# Reference na kostky
-var dice_in_cup: Array = []
-
-# Audio player
 var audio_player: AudioStreamPlayer3D = null
 
 func _ready():
-	# Nastav kelímek na odpočinkovou pozici (mimo hru)
 	position = rest_position
 	rotation = Vector3.ZERO
-	original_position = rest_position
-	original_rotation = Vector3.ZERO
 	
-	# Vytvoř audio player pro zvuky
 	audio_player = AudioStreamPlayer3D.new()
 	add_child(audio_player)
 	
 	print("🥤 Kelímek připraven na pozici: ", rest_position)
 
-func hide_cup():
-	"""Skryj kelímek (už není potřeba - zůstane stranou)"""
-	# Kelímek už zůstane na rest_position, nemusíme ho schovávat
-	pass
-
-func show_cup():
-	"""Zobraz kelímek zpět (už je viditelný)"""
-	# Kelímek je stále viditelný, jen na rest_position
-	pass
-
 func shake_and_throw():
-	"""Zatřes kelímkem a hoď kostky na stůl - NOVÁ VERZE"""
+	"""Jednoduchá profesionální animace: míchání -> oblouk -> vysypání"""
 	if is_shaking:
-		print("⚠️ Kelímek už třese!")
 		return
 	
 	is_shaking = true
-	print("🥤 Začínám házení kostek z pozice: ", position)
-	print("🎯 Cíl hodu: ", throw_target)
+	print("🎲 Začínám hod...")
 	
-	# Zvuk třesení
 	play_shake_sound()
 	
-	# Fáze 1: Třesení na místě (mimo hru)
-	print("📍 Fáze 1: Třesení na rest_position")
-	await shake_cup_in_place()
+	# Fáze 1: Třesení na místě (15, 0, 0)
+	await shake_on_position()
 	
-	# Fáze 2: Hod na hrací plochu
-	print("📍 Fáze 2: Hod k hrací ploše")
-	await throw_to_table()
+	# Fáze 2: Obloukový hod nad stůl
+	await arc_throw()
 	
 	# Fáze 3: Návrat zpět
-	print("📍 Fáze 3: Návrat")
 	await return_to_rest()
 	
 	is_shaking = false
-	print("🥤 Animace dokončena, pozice: ", position)
+	print("✅ Hod dokončen")
 
-func shake_cup_in_place():
-	"""Zatřes kelímkem na odpočinkové pozici"""
-	print("🥤 Třesu kelímkem...")
+func shake_on_position():
+	"""Promíchání kostek na místě (pozice 15, 0, 0)"""
+	print("🔄 Míchám kostky na místě...")
 	
-	var shake_time = shake_duration
 	var steps = 15
+	var step_time = shake_duration / steps
 	
 	for i in range(steps):
 		var t = float(i) / steps
-		var progress = t * shake_time
+		var freq = 25.0 + t * 10.0
 		
-		# Třesení nahoru/dolů a rotace
-		var offset_y = sin(progress * 25.0) * shake_intensity * (1.0 - t * 0.2)
-		var offset_z = cos(progress * 20.0) * shake_intensity * 0.3
-		var rot_z = sin(progress * 30.0) * deg_to_rad(15) * (1.0 - t * 0.3)
+		var offset_y = sin(t * freq) * shake_intensity
+		var offset_z = cos(t * freq * 0.8) * shake_intensity * 0.5
+		
+		var rot_x = sin(t * freq * 1.2) * deg_to_rad(15)
+		var rot_z = cos(t * freq) * deg_to_rad(20)
 		
 		var tween = create_tween()
 		tween.set_parallel(true)
+		tween.set_trans(Tween.TRANS_SINE)
 		
 		tween.tween_property(
-			self, 
-			"position", 
+			self,
+			"position",
 			rest_position + Vector3(0, offset_y, offset_z),
-			shake_time / steps
-		).set_trans(Tween.TRANS_SINE)
+			step_time
+		)
 		
 		tween.tween_property(
 			self,
 			"rotation",
-			Vector3(0, 0, rot_z),
-			shake_time / steps
-		).set_trans(Tween.TRANS_SINE)
+			Vector3(rot_x, 0, rot_z),
+			step_time
+		)
 		
 		await tween.finished
 	
+	# Vrať na výchozí pozici před hodem
+	var reset = create_tween()
+	reset.set_parallel(true)
+	reset.tween_property(self, "position", rest_position, 0.1)
+	reset.tween_property(self, "rotation", Vector3.ZERO, 0.1)
+	await reset.finished
+	
 	shake_complete.emit()
 
-func throw_to_table():
-	"""Hoď kelímek k hrací ploše a vysyp kostky - DEALER STYLE"""
-	print("🎲 Házím na stůl...")
+func arc_throw():
+	"""Obloukový hod nad stůl s vysypáním"""
+	print("🌊 Házím obloukem...")
 	
-	# Fáze 1: Rychlý švih nad stůl
-	var above_table = throw_target + Vector3(-2, 4.0, 0)  # Přilétni z boku
+	var start_pos = rest_position
+	var end_pos = throw_target + Vector3(0, 2.0, 0)
+	var mid_pos = (start_pos + end_pos) / 2.0
+	mid_pos.y += arc_height
 	
-	var move_tween = create_tween()
-	move_tween.set_parallel(true)
+	# Fáze 1: Oblouk k nejvyššímu bodu s počátkem převrácení
+	var rise_tween = create_tween()
+	rise_tween.set_parallel(true)
+	rise_tween.set_trans(Tween.TRANS_QUAD)
+	rise_tween.set_ease(Tween.EASE_OUT)
 	
-	# Rychlý agresivní pohyb
-	move_tween.tween_property(self, "position", above_table, 0.3)\
-		.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN)
-	move_tween.tween_property(
-		self, 
-		"rotation", 
-		Vector3(deg_to_rad(-30), deg_to_rad(-20), deg_to_rad(15)), 
-		0.3
-	).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN)
+	rise_tween.tween_property(self, "position", mid_pos, throw_duration * 0.5)
+	rise_tween.tween_property(
+		self,
+		"rotation",
+		Vector3(deg_to_rad(60), deg_to_rad(-10), deg_to_rad(40)),
+		throw_duration * 0.5
+	)
 	
-	await move_tween.finished
+	await rise_tween.finished
 	
-	# Fáze 2: PRUDKÉ převrácení a vysypání (švih přes stůl)
+	# Fáze 2: Dokončení převrácení a klesání nad stůl
 	var pour_tween = create_tween()
 	pour_tween.set_parallel(true)
+	pour_tween.set_trans(Tween.TRANS_QUAD)
+	pour_tween.set_ease(Tween.EASE_IN)
 	
-	# Švihni přes střed stolu
-	var pour_position = throw_target + Vector3(2, 3.5, 0)
-	# DRAMATICKÉ převrácení
-	var pour_rotation = Vector3(deg_to_rad(140), deg_to_rad(30), deg_to_rad(-50))
+	var pour_rotation = Vector3(deg_to_rad(140), deg_to_rad(-20), deg_to_rad(70))
 	
-	# RYCHLÝ prudký pohyb
-	pour_tween.tween_property(self, "position", pour_position, 0.25)\
-		.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN_OUT)
-	pour_tween.tween_property(self, "rotation", pour_rotation, 0.25)\
-		.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN_OUT)
+	pour_tween.tween_property(self, "position", end_pos, throw_duration * 0.5)
+	pour_tween.tween_property(self, "rotation", pour_rotation, throw_duration * 0.5)
 	
-	# Uvolni kostky HNED na začátku švihu
-	await get_tree().create_timer(0.08).timeout
+	# Vysyp kostky když je kelímek dostatečně převrácený (nastavitelný timing)
+	await get_tree().create_timer(throw_duration * 0.5 * release_timing).timeout
 	release_dice()
 	
 	await pour_tween.finished
-	
-	# Fáze 3: Rychlé narovnání a odtažení
-	await get_tree().create_timer(0.15).timeout
-	
-	var pullback = create_tween()
-	pullback.set_parallel(true)
-	
-	# Odskoč zpět a nahoru
-	var retreat_position = throw_target + Vector3(3, 5.0, 0)
-	
-	pullback.tween_property(self, "position", retreat_position, 0.3)\
-		.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	pullback.tween_property(self, "rotation", Vector3.ZERO, 0.3)\
-		.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	
-	await pullback.finished
+	await get_tree().create_timer(0.2).timeout
 
 func return_to_rest():
-	"""Vrať kelímek zpět na odpočinkovou pozici - RYCHLE"""
-	print("🥤 Vracím se zpět...")
+	"""Plynulý návrat na výchozí pozici"""
+	print("↩️ Vracím se...")
 	
-	# Minimální čekání - už jsme vysoko a stranou
 	await get_tree().create_timer(0.3).timeout
 	
-	# Rychlý návrat
-	var return_tween = create_tween()
-	return_tween.set_parallel(true)
+	var current_pos = position
+	var mid_return = (current_pos + rest_position) / 2.0
+	mid_return.y += 3.0
 	
-	return_tween.tween_property(self, "position", rest_position, 0.6)\
-		.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN_OUT)
-	return_tween.tween_property(self, "rotation", Vector3.ZERO, 0.6)\
-		.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN_OUT)
+	# Fáze 1: Nahoru
+	var up_tween = create_tween()
+	up_tween.set_parallel(true)
+	up_tween.set_trans(Tween.TRANS_CUBIC)
+	up_tween.set_ease(Tween.EASE_OUT)
 	
-	await return_tween.finished
+	up_tween.tween_property(self, "position", mid_return, 0.4)
+	up_tween.tween_property(self, "rotation", Vector3.ZERO, 0.4)
+	
+	await up_tween.finished
+	
+	# Fáze 2: Dolů na místo
+	var down_tween = create_tween()
+	down_tween.set_parallel(true)
+	down_tween.set_trans(Tween.TRANS_CUBIC)
+	down_tween.set_ease(Tween.EASE_IN)
+	
+	down_tween.tween_property(self, "position", rest_position, 0.4)
+	down_tween.tween_property(self, "rotation", Vector3.ZERO, 0.4)
+	
+	await down_tween.finished
 
 func release_dice():
-	"""Uvolni kostky z kelímku"""
-	dice_released.emit()
+	"""Emituj signál pro DiceManager, aby vysypal kostky"""
+	# Pošli aktuální globální pozici kelímku (kde se mají kostky spawnnout)
+	dice_released.emit(global_position)
 	
-	# Vizuální efekt - pouze pokud jsme ve stromu a na hlavním vlákně
 	if is_inside_tree():
 		call_deferred("create_pour_particles")
 	
-	print("✅ Kostky uvolněny!")
+	print("🎲 Signál dice_released odeslán z pozice: ", global_position)
 
 func create_pour_particles():
-	"""Vytvoř částicový efekt při vysypání"""
-	# Zkontroluj že jsme stále ve stromu
+	"""Flash efekt při vysypání"""
 	if not is_inside_tree():
 		return
 	
-	# Jednoduchý flash efekt
 	var flash = OmniLight3D.new()
 	flash.light_color = Color(1.0, 0.95, 0.7)
-	flash.light_energy = 2.0
-	flash.omni_range = 4.0
-	flash.position = Vector3(1, 0, 0)  # Lokální pozice místo global
+	flash.light_energy = 2.5
+	flash.omni_range = 5.0
+	flash.position = Vector3(0, -1, 0)
 	
-	# Přidej jako child kelímku
 	add_child(flash)
 	
-	# Fade out
 	var tween = create_tween()
 	tween.tween_property(flash, "light_energy", 0.0, 0.4)
 	await tween.finished
 	
 	if flash and is_instance_valid(flash):
 		flash.queue_free()
-
-func add_dice_to_cup(dice_array: Array):
-	"""Přidej kostky do kelímku (skryj je)"""
-	dice_in_cup = dice_array
-	for dice in dice_array:
-		dice.visible = false
-		dice.freeze = true
-
-func show_dice():
-	"""Zobraz kostky (po vysypání)"""
-	for dice in dice_in_cup:
-		dice.visible = true
-		dice.freeze = false
 
 func play_shake_sound():
 	"""Přehraj zvuk třesení"""

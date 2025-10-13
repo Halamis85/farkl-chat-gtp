@@ -19,6 +19,12 @@ var audio_manager: Node = null
 var auto_select_mode: bool = false  # Vypnuto automatické bankování - hráč vybírá sám
 
 func _ready():
+	# Najdi audio manager
+	if has_node("/root/AudioManager"):
+		audio_manager = get_node("/root/AudioManager")
+	elif get_parent().has_node("AudioManager"):
+		audio_manager = get_parent().get_node("AudioManager")
+	
 	# Připoj signály z game manageru
 	game_manager.turn_started.connect(_on_turn_started)
 	game_manager.turn_ended.connect(_on_turn_ended)
@@ -39,12 +45,6 @@ func _ready():
 	game_manager.start_new_game(2, ["Hráč 1", "Hráč 2"])
 	update_ui()
 
-func _on_dice_reset_requested():
-	"""Reset všech kostek na začátku tahu"""
-	dice_manager.clear_selection()
-	# Auto-select je vypnutý, takže tlačítko bude jen POTVRDIT
-	btn_select.text = "POTVRDIT VÝBĚR"
-
 func can_roll() -> bool:
 	"""Kontrola, jestli může házet - musí nejdřív vybrat kostky z předchozího hodu"""
 	# Pokud je ve stavu SELECTING, NEMŮŽE házet dokud nevybere kostky
@@ -52,7 +52,16 @@ func can_roll() -> bool:
 		return false
 	return game_manager.can_roll()
 
+func _on_dice_reset_requested():
+	"""Reset všech kostek na začátku tahu"""
+	dice_manager.clear_selection()
+	# Auto-select je vypnutý, takže tlačítko bude jen POTVRDIT
+	btn_select.text = "POTVRDIT VÝBĚR"
+
 func _on_roll_pressed():
+	if audio_manager and audio_manager.has_method("play_button_click"):
+		audio_manager.play_button_click()
+	
 	if can_roll():
 		btn_roll.disabled = true
 		btn_bank.disabled = true
@@ -66,12 +75,18 @@ func _on_roll_pressed():
 			lbl_message.text = "Házím..."
 
 func _on_bank_pressed():
+	if audio_manager and audio_manager.has_method("play_button_click"):
+		audio_manager.play_button_click()
+	
 	if game_manager.can_bank():
 		game_manager.bank_points()
 		# Kostky se resetují automaticky při dalším tahu (dice_reset_requested signál)
 		update_ui()
 
 func _on_select_pressed():
+	if audio_manager and audio_manager.has_method("play_button_click"):
+		audio_manager.play_button_click()
+	
 	"""Potvrď výběr kostek"""
 	var selected = dice_manager.get_selected_dice()
 	if selected.size() > 0:
@@ -112,10 +127,16 @@ func _on_round_scored(_points: int, _bank: int):
 	update_ui()
 
 func _on_player_busted(_player_id: int):
+	if audio_manager and audio_manager.has_method("play_farkle"):
+		audio_manager.play_farkle()
+	
 	lbl_message.text = "❌ FARKLE! Ztraceno vše!"
 	update_ui()
 
 func _on_game_won(player_id: int, _final_score: int):
+	if audio_manager and audio_manager.has_method("play_win"):
+		audio_manager.play_win()
+	
 	lbl_message.text = "🏆 " + game_manager.player_names[player_id] + " VYHRÁVÁ!"
 	btn_roll.disabled = true
 	btn_bank.disabled = true

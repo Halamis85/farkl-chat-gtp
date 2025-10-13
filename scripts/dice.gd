@@ -8,19 +8,19 @@ var is_rolling: bool = false
 var is_selected: bool = false
 var current_value: int = 0
 var settle_timer: float = 0.0
-var settle_threshold: float = 0.5  # Sekundy bez pohybu = zastaveno
+var settle_threshold: float = 0.3  # Sekundy bez pohybu = zastaveno
 
 # Vizuální feedback - prstenec
 var selection_ring: MeshInstance3D = null  # Reference na prstenec
 
 # Definice stran kostky (normálové vektory v local space)
 var face_normals = {
-	1: Vector3.DOWN,
-	2: Vector3.LEFT,
-	3: Vector3.BACK,
-	4: Vector3.FORWARD,
-	5: Vector3.RIGHT,
-	6: Vector3.UP
+	1: Vector3.UP,
+	6: Vector3.DOWN,
+	2: Vector3.FORWARD,
+	5: Vector3.BACK,
+	3: Vector3.LEFT,
+	4: Vector3.RIGHT
 }
 
 func _ready():
@@ -28,13 +28,14 @@ func _ready():
 	contact_monitor = true
 	max_contacts_reported = 4
 	
+	gravity_scale = 1.0 
 	# Fyzikální vlastnosti
 	mass = 0.015  # Lehká kostka (15g)
 	physics_material_override = PhysicsMaterial.new()
-	physics_material_override.friction = 0.6  # Tření
-	physics_material_override.bounce = 0.3  # Trochu poskakování
+	physics_material_override.friction = 0.7  # Tření
+	physics_material_override.bounce = 0.2  # Trochu poskakování
 	
-	linear_damp = 1.5  # Rychlejší zpomalení lineárního pohybu
+	linear_damp = 1.0  # Rychlejší zpomalení lineárního pohybu
 	angular_damp = 2.0  # Rychlejší zpomalení rotace
 	
 	# Najdi prstenec vytvořený v editoru
@@ -44,11 +45,6 @@ func _ready():
 	else:
 		# Pokud neexistuje, vytvoř ho programově
 		create_selection_ring()
-
-func hide_in_cup():
-	"""Skryj kostku (je v kelímku)"""
-	visible = false
-	freeze = true
 
 func show_and_activate():
 	"""Zobraz kostku a aktivuj fyziku"""
@@ -81,7 +77,7 @@ func create_selection_ring():
 	
 	# Pozice a rotace
 	selection_ring.position = Vector3(0, -0.6, 0)  # Pod kostkou
-	selection_ring.rotation_degrees = Vector3(90, 0, 0)  # Horizontálně
+	selection_ring.rotation_degrees = Vector3(0, 0, 90)  # Horizontálně
 	
 	selection_ring.visible = false
 	
@@ -89,21 +85,45 @@ func create_selection_ring():
 	print("✨ Prstenec vytvořen automaticky")
 
 func _physics_process(delta):
+	# ⚠️ DEBUG - sleduj kostku po celou dobu
 	if is_rolling:
 		# Kontrola, zda se kostka zastavila
 		var velocity = linear_velocity.length() + angular_velocity.length()
 		
-		if velocity < 0.1:  # Téměř žádný pohyb
+		# ⚠️ PŘIDEJ DEBUG VÝPISY
+		if int(Engine.get_frames_drawn()) % 30 == 0:  # Každých 30 framů
+			print("🎲 [", name, "] Y=", "%.2f" % global_position.y, 
+				  " velocity=", "%.2f" % velocity, 
+				  " visible=", visible,
+				  " freeze=", freeze)
+		
+		# Bezpečnostní kontrola - kostka spadla příliš nízko
+		if global_position.y < -5.0:
+			print("⚠️ KOSTKA SPADLA MIMO SCÉNU! Y=", global_position.y)
+			print("   Resetuji na stůl...")
+			global_position = Vector3(randf_range(-2, 2), 3.0, randf_range(-2, 2))
+			linear_velocity = Vector3.ZERO
+			angular_velocity = Vector3.ZERO
+		
+		if velocity < 0.05:
 			settle_timer += delta
 			if settle_timer >= settle_threshold:
 				stop_rolling()
 		else:
 			settle_timer = 0.0
-	
 	# Udržuj prstenec vždy horizontální (i když se kostka točí)
 	if selection_ring and selection_ring.visible:
-		selection_ring.global_rotation = Vector3(deg_to_rad(90), 0, 0)
+		selection_ring.global_rotation = Vector3(deg_to_rad(0), 90, 0)
 	
+
+func start_rolling():
+	"""Začni sledovat kutálení (pro hod z kelímku kde velocity je nastavena přímo)"""
+	is_rolling = true
+	settle_timer = 0.0
+	dice_rolling.emit()
+	print("🎲 Kostka začala kutálení (external throw)")
+
+# V dice.gd - NAHRAĎ funkci roll():
 func roll(impulse_strength: float = 3.0):
 	"""Hoď kostkou s náhodným impulzem - realisticky"""
 	is_rolling = true
@@ -121,32 +141,30 @@ func roll(impulse_strength: float = 3.0):
 		randf_range(0, TAU)
 	)
 	
-	# Realistický impulz - více nahoru, méně do stran
+	# ⚠️ OPRAVENÝ SMĚR - mnohem víc do stran, míň nahoru
 	var throw_direction = Vector3(
-		randf_range(-0.8, 0.8),   # Trochu do stran
-		randf_range(2.5, 4.0),    # Hlavně nahoru
-		randf_range(-0.8, 0.8)    # Trochu dopředu/dozadu
+		randf_range(-1.0, 1.0),   # Hodně do stran
+		randf_range(0.3, 0.8),    # Jen TROCHU nahoru (bylo 1.5-2.5!)
+		randf_range(-1.0, 1.0)    # Hodně dopředu/dozadu
 	).normalized()
 	
 	var random_impulse = throw_direction * impulse_strength
 	
-	# Silná rotace pro realistické kutálení
+	# Rotace pro realistické kutálení
 	var random_torque = Vector3(
-		randf_range(-15, 15),
-		randf_range(-15, 15),
-		randf_range(-15, 15)
+		randf_range(-12, 12),
+		randf_range(-12, 12),
+		randf_range(-12, 12)
 	)
-	
-	# Přidej náhodný malý offset k pozici pro více variability
-	var spawn_offset = Vector3(
-		randf_range(-0.3, 0.3),
-		randf_range(0, 0.5),
-		randf_range(-0.3, 0.3)
-	)
-	position += spawn_offset
 	
 	apply_central_impulse(random_impulse)
 	apply_torque_impulse(random_torque)
+	
+	var normalized_dir = throw_direction
+	print("🎲 Kostka hodena z Y=", "%.2f" % global_position.y, 
+		  " směrem: (X=", "%.2f" % normalized_dir.x, 
+		  " Y=", "%.2f" % normalized_dir.y, 
+		  " Z=", "%.2f" % normalized_dir.z, ") silou: ", impulse_strength)
 
 func stop_rolling():
 	"""Zastav kostku a detekuj hodnotu"""

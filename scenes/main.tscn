@@ -69,6 +69,7 @@ script = ExtResource("8_choun")
 
 [node name="Camera3D" type="Camera3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 0.7071068, 0.7071068, 0, -0.7071068, 0.7071068, 0, 8, 8)
+cull_mask = 1040383
 script = ExtResource("9_ya4ey")
 overview_position = Vector3(0, 16, 18)
 overview_rotation = Vector3(-0.8, 0, 0)
@@ -76,46 +77,47 @@ focused_position = Vector3(0, 10, 1)
 focused_rotation = Vector3(-1.6, 0, 0)
 shake_position = Vector3(-4, 7, 10)
 shake_rotation = Vector3(-0.655, -0.436, 0)
+smooth_speed = 2.0
 
-[node name="StaticBody3D" type="StaticBody3D" parent="."]
+[node name="Table" type="StaticBody3D" parent="."]
 
-[node name="MeshInstance3D" type="MeshInstance3D" parent="StaticBody3D"]
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Table"]
 mesh = SubResource("BoxMesh_sgp6g")
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="StaticBody3D"]
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Table"]
 shape = SubResource("BoxShape3D_o5qli")
 
-[node name="Wall" type="StaticBody3D" parent="StaticBody3D"]
+[node name="Wall" type="StaticBody3D" parent="Table"]
 
-[node name="Wall FR" type="MeshInstance3D" parent="StaticBody3D/Wall"]
+[node name="Wall FR" type="MeshInstance3D" parent="Table/Wall"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.23, 10)
 mesh = SubResource("BoxMesh_tbgi4")
 
-[node name="Wall FR2" type="CollisionShape3D" parent="StaticBody3D/Wall"]
+[node name="Wall FR2" type="CollisionShape3D" parent="Table/Wall"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 4, 9.924561)
 shape = SubResource("BoxShape3D_tefeu")
 
-[node name="Wall BC" type="MeshInstance3D" parent="StaticBody3D/Wall"]
+[node name="Wall BC" type="MeshInstance3D" parent="Table/Wall"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.23, -10)
 mesh = SubResource("BoxMesh_o6xl0")
 
-[node name="Wall BC2" type="CollisionShape3D" parent="StaticBody3D/Wall"]
+[node name="Wall BC2" type="CollisionShape3D" parent="Table/Wall"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 4, -10)
 shape = SubResource("BoxShape3D_tipki")
 
-[node name="Wall LF2" type="MeshInstance3D" parent="StaticBody3D/Wall"]
+[node name="Wall LF2" type="MeshInstance3D" parent="Table/Wall"]
 transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, -10, -0.23, 0)
 mesh = SubResource("BoxMesh_85g3d")
 
-[node name="Wall LF" type="CollisionShape3D" parent="StaticBody3D/Wall"]
+[node name="Wall LF" type="CollisionShape3D" parent="Table/Wall"]
 transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, -10, 4, 0)
 shape = SubResource("BoxShape3D_choun")
 
-[node name="Wall RG" type="MeshInstance3D" parent="StaticBody3D/Wall"]
+[node name="Wall RG" type="MeshInstance3D" parent="Table/Wall"]
 transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, 10.1, -0.23, 0)
 mesh = SubResource("BoxMesh_ya4ey")
 
-[node name="Wall RG2" type="CollisionShape3D" parent="StaticBody3D/Wall"]
+[node name="Wall RG2" type="CollisionShape3D" parent="Table/Wall"]
 transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, 10, 4, 0)
 shape = SubResource("BoxShape3D_eb6dy")
 
@@ -168,4 +170,4 @@ script = ExtResource("3_tbgi4")
 script = ExtResource("5_o6xl0")
 
 [node name="DiceCup" parent="." instance=ExtResource("11_ya4ey")]
-transform = Transform3D(70, 0, 0, 0, 70, 0, 0, 0, 70, 15, 0, 0)
+transform = Transform3D(60, 0, 0, 0, 60, 0, 0, 0, 60, 15, 0, 0)
