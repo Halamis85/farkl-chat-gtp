@@ -1,5 +1,5 @@
 extends Node3D
-
+#dice_efekt
 ## Systém pro vizuální efekty při hře v kostky
 
 # Předpřipravené částice

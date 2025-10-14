@@ -1,8 +1,9 @@
 extends Node3D
+#DiceManager
+@export var camera_controller: Camera3D
 
 signal all_dice_stopped(values: Array)
 signal dice_rolling_started
-# signal cup_animation_complete()  # Nepoužitý signál
 
 const DICE_SCENE = preload("res://scenes/dice.tscn")
 const NUM_DICE = 6
@@ -78,10 +79,9 @@ func _ready():
 		print("   Freeze: ", test_dice.freeze)
 		print("   Collision layer: ", test_dice.collision_layer)
 		print("   Collision mask: ", test_dice.collision_mask)
-	
-	
-
-
+		
+	if camera_controller == null:
+		camera_controller = camera
 
 func create_dice():
 	"""Vytvoř 6 kostek"""
@@ -90,8 +90,8 @@ func create_dice():
 		add_child(dice)
 		
 		# Nastav počáteční pozici
-		var row = i / 3.0  # Řádek (0 nebo 1)
-		var col = i % 3  # Sloupec (0, 1, nebo 2)
+		var row = i / 3
+		var col = i % 3
 		var offset = Vector3(
 			float(col - 1) * 1.5,
 			0,
@@ -152,9 +152,8 @@ func roll_all_dice(banked_indices: Array = []):
 		first_roll = false  # Už to není první hod
 		perform_cup_animation(dice_to_roll_indices)
 	else:
-		# Klasické házení bez kelímku
+		# ⚠️ KLÍČOVÁ ZMĚNA - rehod také používá kelímek!
 		perform_classic_roll(dice_to_roll_indices)
-
 
 func perform_cup_animation(indices: Array):
 	"""Animace s kelímkem - nová verze s hozením"""
@@ -182,108 +181,129 @@ func perform_cup_animation(indices: Array):
 	else:
 		print("⚠️ Kelímek nemá metodu shake_and_throw!")
 		# Fallback - klasické házení
-		perform_classic_roll(indices)
+		perform_simple_throw(indices)
 	
 	# Kamera na kostky - rychle
-	await get_tree().create_timer(0.4).timeout
+	await get_tree().create_timer(3.0).timeout
 	if camera and camera.has_method("move_to_focused") and use_camera_animations:
 		camera.move_to_focused()
-		
-	# Camera shake efekt při dopadu
-	await get_tree().create_timer(0.5).timeout
-	if camera and camera.has_method("add_camera_shake"):
-		camera.add_camera_shake(0.2, 0.5)
 
-# V dice_manager.gd - NAHRAĎ celou funkci perform_classic_roll():
+func reset_all_dice_for_reroll():
+	"""Resetuj všechny kostky do počátečního stavu - KROMĚ zabanovaných"""
+	print("🔄 Kompletní reset kostek pro rehod (kromě zabanovaných)...")
+	
+	for i in range(dice_array.size()):
+		# ⚠️ PŘESKOČ zabanované kostky - ty už jsou stranou!
+		if banked_dice.has(i):
+			print("⏭️ Kostka ", i, " je zabanovaná, ponechávám stranou")
+			continue
+		
+		var dice = dice_array[i]
+		
+		# Úplný reset fyziky
+		dice.freeze = true
+		dice.linear_velocity = Vector3.ZERO
+		dice.angular_velocity = Vector3.ZERO
+		dice.visible = false
+		dice.is_rolling = false
+		dice.settle_timer = 0.0
+		
+		# Reset pozice na původní místo (v kelímku)
+		var row = i / 3
+		var col = i % 3
+		var offset = Vector3(
+			float(col - 1) * 1.5,
+			0,
+			float(row) * 1.5 - 0.75
+		)
+		dice.position = spawn_position + offset
+		dice.rotation = Vector3.ZERO
+		
+		# Skryj prstenec
+		dice.set_selected(false)
+	
+	print("✅ Kostky resetovány (zabanované zůstaly stranou)")
 
 func perform_classic_roll(indices: Array):
-	"""Klasické házení kostkami (bez kelímku) - OPRAVENÁ VERZE s GLOBAL pozicemi"""
-	print("🎲 Klasické házení ", indices.size(), " kostek...")
+	"""Klasické házení - použij kelímek i pro rehody! Čistý start."""
+	print("🎲 Rehod pomocí kelímku - kompletní reset...")
+	
+	# KROK 1: Kompletní reset VŠECH kostek do počátečního stavu
+	reset_all_dice_for_reroll()
+	
+	# KROK 2: Krátké čekání aby se rendering stihl
+	await get_tree().create_timer(0.1).timeout
+	
+	# KROK 3: Použij kelímek pro hod (bez animace zatřesení pro rychlost)
+	if dice_cup and dice_cup.has_method("shake_and_throw"):
+		# Použij kelímek - ideálně by měl mít metodu throw_without_shake
+		# ale použijeme i s animací
+		dice_cup.shake_and_throw()
+		var release_position = await dice_cup.dice_released
+		show_and_throw_dice(indices, release_position)
+		
+		# Kamera
+		if camera and camera.has_method("move_to_focused") and use_camera_animations:
+			await get_tree().create_timer(3.0).timeout
+			camera.move_to_focused()
+	else:
+		# Fallback - bez kelímku
+		print("⚠️ Kelímek nedostupný, použiju fallback...")
+		perform_simple_throw(indices)
+	
+	print("✅ Rehod dokončen")
+
+func perform_simple_throw(indices: Array):
+	"""Jednoduchý hod bez kelímku - fallback když kelímek není dostupný"""
+	print("🎲 Jednoduchý hod ", indices.size(), " kostek (bez kelímku)...")
 	
 	# Zvuk házení
 	if audio_manager and audio_manager.has_method("play_dice_roll"):
 		audio_manager.play_dice_roll()
 	
-	# ⚠️ KLÍČOVÁ OPRAVA - použij GLOBÁLNÍ pozice!
+	# Zobraz a aktivuj jen ty kostky, které házíme
 	for idx in indices:
 		if idx < dice_array.size():
 			var dice = dice_array[idx]
 			
-			print("📍 Před rehodem - Kostka ", idx, ":")
-			print("   visible=", dice.visible, " freeze=", dice.freeze)
-			print("   position=", dice.position, " global_position=", dice.global_position)
+			# Umísti kostku vysoko nad stolem s náhodným rozptylem
+			dice.global_position = Vector3(
+				randf_range(-3.0, 3.0),
+				5.0,  # Vysoko nad stolem
+				randf_range(-3.0, 3.0)
+			)
 			
-			# Zobraz kostku
+			# Náhodná rotace
+			dice.rotation = Vector3(
+				randf_range(0, TAU),
+				randf_range(0, TAU),
+				randf_range(0, TAU)
+			)
+			
 			dice.visible = true
 			dice.freeze = false
-			
-			# ⚠️ POUŽIJ GLOBAL POZICI - teleportuj nad střed stolu (vyšší spawn)
-			var spawn_x = randf_range(-2.0, 2.0)
-			var spawn_z = randf_range(-2.0, 2.0)
-			dice.global_position = Vector3(spawn_x, 2.0, spawn_z)  # Sníženo z 3.0 na 2.0
-			
-			# Reset velocity
 			dice.linear_velocity = Vector3.ZERO
 			dice.angular_velocity = Vector3.ZERO
-			
-			print("   Po úpravě:")
-			print("   visible=", dice.visible, " freeze=", dice.freeze)
-			print("   global_position=", dice.global_position)
 	
-	# Krátká pauza aby se kostky aktivovaly
-	await get_tree().create_timer(0.15).timeout
+	# Počkej frame aby se fyzika probudila
+	await get_tree().process_frame
 	
-	# TEĎ hoď kostkami
-	for i in range(indices.size()):
-		var idx = indices[i]
-		if idx < dice_array.size():
-			var dice = dice_array[idx]
-			
-			# ⚠️ SNÍŽENÁ síla protože teď padají správně
-			var strength = randf_range(2.0, 3.5)  # Bylo 2.5-4.0
-			
-			# Malé zpoždění mezi kostkami
-			if i > 0:
-				await get_tree().create_timer(randf_range(0.03, 0.1)).timeout
-			
-			print("🎲 Házím kostkou ", idx, " z pozice ", dice.global_position)
-			dice.roll(strength)
-	
-	print("✅ Všechny kostky hozeny a viditelné!")
-
-
-	# Krátká pauza aby se kostky aktivovaly
-	await get_tree().create_timer(0.1).timeout
-	
-	# TEĎ hoď kostkami s malým časovým odstupem
-	for i in range(indices.size()):
-		var idx = indices[i]
-		if idx < dice_array.size():
-			var dice = dice_array[idx]
-			
-			# ⚠️ MENŠÍ síla pro rehod (kostky jsou už blíž stolu)
-			var strength = randf_range(3.0, 5.0)  # Bylo 4.5-7.5
-			
-			# Malé zpoždění mezi kostkami pro přirozenější efekt
-			if i > 0:
-				await get_tree().create_timer(randf_range(0.02, 0.08)).timeout
-			
-			dice.roll(strength)
-			print("🎲 Hodil jsem kostkou ", idx, " silou ", strength)
-	
-	print("✅ Všechny kostky hozeny a viditelné!")
-
-func show_dice(indices: Array):
-	"""Zobraz vybrané kostky (při vysypání)"""
+	# Hoď všemi najednou
 	for idx in indices:
 		if idx < dice_array.size():
 			var dice = dice_array[idx]
-			dice.visible = true
-			dice.freeze = false
-	print("👁️ Zobrazeno ", indices.size(), " kostek")
+			var strength = randf_range(3.0, 5.0)
+			dice.roll(strength)
+	
+	# Označ že kostky se kutálí
+	is_rolling = true
+	dice_stopped_count = 0
+	dice_rolling_started.emit()
+	
+	print("✅ Všechny kostky hozeny!")
 
 func show_and_throw_dice(indices: Array, cup_release_position: Vector3 = Vector3.ZERO):
-	"""Zobraz kostky a hoď jimi jako z kelímku - OPRAVENÁ VERZE s pozicí"""
+	"""Zobraz kostky a hoď jimi jako z kelímku"""
 	print("🎲 Vysypávám ", indices.size(), " kostek z pozice: ", cup_release_position)
 	
 	# Pokud nebyla poskytnuta pozice, použij fallback
@@ -318,18 +338,18 @@ func show_and_throw_dice(indices: Array, cup_release_position: Vector3 = Vector3
 				randf_range(-0.4, 0.4)
 			)).normalized()
 			
-			# ⚠️ ZVÝŠENÁ SÍLA - aby kostky energicky dopadly
-			var throw_force = randf_range(8.0, 12.0)  # Bylo 6.0-9.0
+			# Síla hodu
+			var throw_force = randf_range(8.0, 12.0)
 			dice.linear_velocity = throw_direction * throw_force
 			
 			# Silnější rotace pro efektnější hod
 			dice.angular_velocity = Vector3(
-				randf_range(-20, 20),  # Bylo -15 až 15
+				randf_range(-20, 20),
 				randf_range(-20, 20),
 				randf_range(-20, 20)
 			)
 			
-			# ⚠️ KLÍČOVÁ OPRAVA - řekni kostce že začala kutálení!
+			# Řekni kostce že začala kutálení
 			dice.start_rolling()
 			
 			# Mírná prodleva mezi kostkami pro efekt vysypávání
@@ -356,7 +376,8 @@ func _on_dice_stopped(_value: int):
 	if dice_stopped_count >= rolling_dice_indices.size():
 		is_rolling = false
 		
-		# Aktualizuj hodnoty jen těch kostek, které se právě kutálely
+		# ⚠️ DŮLEŽITÉ - aktualizuj hodnoty JEN pro kostky, které se právě kutálely
+		# Zabanované kostky si zachovají své původní hodnoty!
 		for idx in rolling_dice_indices:
 			if idx < dice_array.size():
 				var val = dice_array[idx].get_value()
@@ -367,6 +388,13 @@ func _on_dice_stopped(_value: int):
 					last_values[idx] = 1  # Fallback
 		
 		print("Všechny kostky zastaveny. Hodnoty: ", last_values)
+		
+		if camera_controller:
+			var dice_positions = []
+			for die in dice_array:
+				dice_positions.append(die.global_position)
+			camera_controller.move_to_focused(dice_positions, false)
+				
 		all_dice_stopped.emit(last_values.duplicate())
 
 func count_rolling_dice() -> int:
@@ -379,10 +407,7 @@ func count_rolling_dice() -> int:
 
 func get_all_values() -> Array:
 	"""Získej hodnoty všech kostek"""
-	var values = []
-	for dice in dice_array:
-		values.append(dice.get_value())
-	return values
+	return last_values.duplicate()
 
 func get_dice(index: int):
 	"""Získej konkrétní kostku"""
@@ -394,8 +419,8 @@ func reset_positions():
 	"""Resetuj pozice kostek"""
 	for i in range(dice_array.size()):
 		var dice = dice_array[i]
-		var row = i / 3.0  # Řádek (0 nebo 1)
-		var col = i % 3  # Sloupec (0, 1, nebo 2)
+		var row = i / 3
+		var col = i % 3
 		var offset = Vector3(
 			float(col - 1) * 1.5,
 			0,
@@ -445,15 +470,26 @@ func get_banked_dice() -> Array:
 
 func clear_selection():
 	"""Zruš dočasný výběr (manuální režim) a resetuj všechny kostky"""
-	# Vrať zabanované kostky zpět
-	for idx in banked_dice:
-		if idx < dice_array.size():
-			dice_array[idx].set_selected(false)
-	
 	# Vyčisti dočasný výběr
 	for idx in selected_dice:
 		if idx < dice_array.size():
 			dice_array[idx].set_selected(false)
+	
+	# ⚠️ Vrať zabanované kostky zpět (resetuj jejich pozice)
+	for idx in banked_dice:
+		if idx < dice_array.size():
+			var dice = dice_array[idx]
+			dice.set_selected(false)
+			
+			# Vrať kostku zpět do kelímku
+			var row = idx / 3
+			var col = idx % 3
+			var offset = Vector3(
+				float(col - 1) * 1.5,
+				0,
+				float(row) * 1.5 - 0.75
+			)
+			dice.position = spawn_position + offset
 	
 	selected_dice.clear()
 	banked_dice.clear()
@@ -462,7 +498,8 @@ func clear_selection():
 	# Skryj všechny kostky zpět do kelímku
 	hide_all_dice()
 	
-	# Kelímek zůstává na rest_position, není potřeba ho zobrazovat
+	# Reset hodnot
+	last_values = [0, 0, 0, 0, 0, 0]
 	
 	print("🔄 Reset všech kostek - schované v kelímku")
 
@@ -471,25 +508,45 @@ func hide_all_dice():
 	for dice in dice_array:
 		dice.visible = false
 		dice.freeze = true
+		dice.set_selected(false)
 	print("👻 Schováno ", dice_array.size(), " kostek")
 
 func mark_dice_as_banked(indices: Array):
-	"""Označ kostky jako zabanované (přesunou se stranou a změní barvu)"""
+	"""Označ kostky jako zabanované a přesuň je stranou"""
 	for idx in indices:
 		if idx < dice_array.size() and not banked_dice.has(idx):
 			banked_dice.append(idx)
 			var dice = dice_array[idx]
-			dice.set_selected(true)  # Zobrazí prstenec
+			
+			# Zobraz prstenec
+			dice.set_selected(true)
+			
+			# ⚠️ PŘESUŇ kostku na kraj stolu (vpravo)
+			# Každá zabanovaná kostka dostane své místo v řadě
+			var banked_position_index = banked_dice.size() - 1
+			var banked_position = Vector3(
+				8.0, #+ banked_position_index * 1.2,  # Pozice na stole start
+				0.6,  # Výška nad stolem
+				0.0 + banked_position_index * 1.8 #řada horizontální x.x ke rozestup
+			)
+			
+			# Zmraz a přesuň
+			dice.freeze = true
+			dice.linear_velocity = Vector3.ZERO
+			dice.angular_velocity = Vector3.ZERO
+			dice.global_position = banked_position
+			dice.visible = true  # Zůstane viditelná!
+			
+			print("💾 Zabanovaná kostka ", idx, " má hodnotu: ", last_values[idx])
+			print("📦 Přesunuta na pozici: ", banked_position)
 			
 			# Efekt při skórování
 			if effects_manager and effects_manager.has_method("play_score_effect"):
 				effects_manager.play_score_effect(dice.global_position)
 	
-	# Zvuk skórování
 	if audio_manager and audio_manager.has_method("play_score"):
 		audio_manager.play_score()
 	
-	# Vyčisti dočasný výběr
 	selected_dice.clear()
 	
 	print("✅ Zabanované kostky: ", banked_dice)

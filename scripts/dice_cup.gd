@@ -1,5 +1,5 @@
 extends Node3D
-
+#Dice_cup
 signal shake_complete()
 signal dice_released(release_position: Vector3)  # Posílá pozici kde vysypat
 

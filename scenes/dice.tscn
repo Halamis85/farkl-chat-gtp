@@ -24,7 +24,7 @@ ring_segments = 8
 shape = SubResource("BoxShape3D_mg5ex")
 
 [node name="Sketchfab_model" parent="." index="1"]
-transform = Transform3D(0.9, 0, 0, 0, -3.934025e-08, 0.9, 0, -0.9, -3.934025e-08, 0, 0, 0)
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 0, 0, 0)
 
 [node name="4232112a6fd94e12b113522595c30aed_fbx" parent="Sketchfab_model" index="0"]
 transform = Transform3D(1, 0, 0, 0, -4.371139e-08, -1, 0, 1, -4.371139e-08, 0, 0, 0)

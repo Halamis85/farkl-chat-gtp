@@ -1,5 +1,5 @@
 extends RigidBody3D
-
+#Dice 
 signal dice_stopped(value: int)
 signal dice_rolling
 signal dice_clicked(dice: RigidBody3D)
@@ -85,36 +85,49 @@ func create_selection_ring():
 	print("✨ Prstenec vytvořen automaticky")
 
 func _physics_process(delta):
-	# ⚠️ DEBUG - sleduj kostku po celou dobu
 	if is_rolling:
-		# Kontrola, zda se kostka zastavila
+		# Kontrola rychlosti pro detekci zastavení
 		var velocity = linear_velocity.length() + angular_velocity.length()
 		
-		# ⚠️ PŘIDEJ DEBUG VÝPISY
-		if int(Engine.get_frames_drawn()) % 30 == 0:  # Každých 30 framů
+		# Debug výpisy každých 30 framů
+		if int(Engine.get_frames_drawn()) % 30 == 0:
 			print("🎲 [", name, "] Y=", "%.2f" % global_position.y, 
 				  " velocity=", "%.2f" % velocity, 
 				  " visible=", visible,
 				  " freeze=", freeze)
 		
-		# Bezpečnostní kontrola - kostka spadla příliš nízko
+		# ⚠️ OPRAVENÁ bezpečnostní kontrola
 		if global_position.y < -5.0:
 			print("⚠️ KOSTKA SPADLA MIMO SCÉNU! Y=", global_position.y)
-			print("   Resetuji na stůl...")
-			global_position = Vector3(randf_range(-2, 2), 3.0, randf_range(-2, 2))
+			print("   Resetuji a zastavuji...")
+			
+			# Teleportuj zpět nahoru
+			global_position = Vector3(
+				randf_range(-2, 2), 
+				2.0,  # Nižší spawn
+				randf_range(-2, 2)
+			)
+			
+			# Reset fyziky
 			linear_velocity = Vector3.ZERO
 			angular_velocity = Vector3.ZERO
+			freeze = true  # ⚠️ ZASTAV kostku!
+			
+			# Ukonči kutálení
+			stop_rolling()
+			return
 		
+		# Detekce zastavení normálním způsobem
 		if velocity < 0.05:
 			settle_timer += delta
 			if settle_timer >= settle_threshold:
 				stop_rolling()
 		else:
 			settle_timer = 0.0
-	# Udržuj prstenec vždy horizontální (i když se kostka točí)
-	if selection_ring and selection_ring.visible:
-		selection_ring.global_rotation = Vector3(deg_to_rad(0), 90, 0)
 	
+	# Udržuj prstenec horizontální
+	if selection_ring and selection_ring.visible:
+		selection_ring.global_rotation = Vector3.ZERO
 
 func start_rolling():
 	"""Začni sledovat kutálení (pro hod z kelímku kde velocity je nastavena přímo)"""
@@ -123,48 +136,67 @@ func start_rolling():
 	dice_rolling.emit()
 	print("🎲 Kostka začala kutálení (external throw)")
 
-# V dice.gd - NAHRAĎ funkci roll():
 func roll(impulse_strength: float = 3.0):
-	"""Hoď kostkou s náhodným impulzem - realisticky"""
+	"""Hoď kostkou s náhodným impulzem - BEZ AWAIT!"""
+	
+	# Kontrola jestli kostka může být hozena
+	if is_rolling:
+		print("⚠️ Kostka ", name, " už se kutálí, ignoruji hod!")
+		return
+	
+	# ⚠️ ZMĚNA - pokud je frozen, prostě odmítni hod
+	# Aktivace musí proběhnout PŘED voláním roll()
+	if freeze:
+		print("⚠️ Kostka ", name, " je frozen, nelze hodit! Aktivuj ji nejdřív.")
+		return
+	
+	# Debug kontrola
+	print("🔍 PRE-ROLL check kostky ", name, ":")
+	print("   Global pos: ", global_transform.origin)
+	print("   Velocity: ", linear_velocity)
+	
+	# Bezpečnostní kontrola pozice
+	if abs(global_transform.origin.x) > 20 or abs(global_transform.origin.z) > 20:
+		print("🚫 ODMÍTÁM HOD - kostka je moc daleko!")
+		global_transform.origin = Vector3(0, 2, 0)
+		linear_velocity = Vector3.ZERO
+		angular_velocity = Vector3.ZERO
+		return
+	
+	# Bezpečnostní kontrola velocity
+	if abs(linear_velocity.y) > 0.5:
+		print("⚠️ KOSTKA UŽ PADÁ! Resetuji velocity...")
+		linear_velocity = Vector3.ZERO
+		angular_velocity = Vector3.ZERO
+	
 	is_rolling = true
 	settle_timer = 0.0
 	dice_rolling.emit()
 	
-	# Reset rychlostí
-	angular_velocity = Vector3.ZERO
+	# Ujisti se že velocity je nulová
 	linear_velocity = Vector3.ZERO
+	angular_velocity = Vector3.ZERO
 	
-	# Náhodná počáteční rotace pro větší variabilitu
-	rotation = Vector3(
-		randf_range(0, TAU),
-		randf_range(0, TAU),
-		randf_range(0, TAU)
-	)
-	
-	# ⚠️ OPRAVENÝ SMĚR - mnohem víc do stran, míň nahoru
+	# Směr hodu
 	var throw_direction = Vector3(
-		randf_range(-1.0, 1.0),   # Hodně do stran
-		randf_range(0.3, 0.8),    # Jen TROCHU nahoru (bylo 1.5-2.5!)
-		randf_range(-1.0, 1.0)    # Hodně dopředu/dozadu
+		randf_range(-1.0, 1.0),
+		randf_range(0.3, 0.7),
+		randf_range(-1.0, 1.0)
 	).normalized()
 	
 	var random_impulse = throw_direction * impulse_strength
 	
-	# Rotace pro realistické kutálení
+	# Rotace
 	var random_torque = Vector3(
-		randf_range(-12, 12),
-		randf_range(-12, 12),
-		randf_range(-12, 12)
+		randf_range(-10, 10),
+		randf_range(-10, 10),
+		randf_range(-10, 10)
 	)
 	
 	apply_central_impulse(random_impulse)
 	apply_torque_impulse(random_torque)
 	
-	var normalized_dir = throw_direction
-	print("🎲 Kostka hodena z Y=", "%.2f" % global_position.y, 
-		  " směrem: (X=", "%.2f" % normalized_dir.x, 
-		  " Y=", "%.2f" % normalized_dir.y, 
-		  " Z=", "%.2f" % normalized_dir.z, ") silou: ", impulse_strength)
+	print("✅ Kostka ", name, " hodena směrem: ", throw_direction, " silou: ", impulse_strength)
 
 func stop_rolling():
 	"""Zastav kostku a detekuj hodnotu"""
@@ -185,6 +217,34 @@ func stop_rolling():
 	dice_stopped.emit(current_value)
 	
 	print("Kostka ukázala: ", current_value)
+
+func reset_for_reroll(new_local_position: Vector3):
+	"""Úplný reset kostky pro rehod - zůstane frozen!"""
+	
+	# 1. ZASTAVENÍ FYZIKY
+	freeze = true  # Zůstane frozen!
+	linear_velocity = Vector3.ZERO
+	angular_velocity = Vector3.ZERO
+	
+	# 2. RESET STAVU
+	is_rolling = false
+	settle_timer = 0.0
+	
+	# 3. RESET TRANSFORMACE
+	var parent_global = get_parent().global_transform.origin if get_parent() else Vector3.ZERO
+	global_transform.origin = parent_global + new_local_position
+	
+	# 4. NÁHODNÁ ROTACE
+	rotation = Vector3(
+		randf_range(0, TAU),
+		randf_range(0, TAU),
+		randf_range(0, TAU)
+	)
+	
+	# 5. ZOBRAZ kostku (ale nech frozen)
+	visible = true
+	
+	print("🔄 Kostka ", name, " resetována (frozen) na: ", global_transform.origin)
 
 func get_top_face() -> int:
 	"""Zjisti, která strana kostky je nahoře"""

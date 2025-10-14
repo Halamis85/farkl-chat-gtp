@@ -22,7 +22,7 @@ var current_state: CameraState = CameraState.OVERVIEW
 @export var overview_rotation = Vector3(deg_to_rad(-50), 0, 0)
 
 # Přiblížení na kostky - střed stolu
-@export var focused_position = Vector3(0, 8, 6)
+@export var focused_position = Vector3(0, 10, 6)
 @export var focused_rotation = Vector3(deg_to_rad(-55), 0, 0)
 
 # Pohled na kelímek - PRAVÝ ROH
@@ -33,7 +33,7 @@ var current_state: CameraState = CameraState.OVERVIEW
 @export var transition_duration: float = 1.0
 @export var smooth_speed: float = 5.0
 @export var fov_default: float = 75.0
-@export var fov_focused: float = 65.0
+@export var fov_focused: float = 70.0
 @export var use_cinematic_transitions: bool = true
 
 var target_position: Vector3
@@ -82,30 +82,86 @@ func move_to_overview(instant: bool = false):
 	else:
 		move_to(overview_position, overview_rotation, fov_default)
 
+
 func move_to_focused(dice_positions: Array = [], instant: bool = false):
-	"""Přiblíž kameru na hozené kostky"""
+	"""Přiblíž kameru na hozené kostky - záběr na šířku i výšku"""
 	print("📷 Kamera: Přiblížení na kostky")
 	current_state = CameraState.FOCUSED
 	
 	var final_pos = focused_position
 	var final_rot = focused_rotation
+	var final_fov = fov_focused
 	
-	# Pokud máme pozice kostek, vypočítej střed
+	# Pokud máme pozice kostek, vypočítej optimální záběr
 	if dice_positions.size() > 0:
-		var center = Vector3.ZERO
-		for pos in dice_positions:
-			center += pos
-		center /= dice_positions.size()
+		# 1. Najdi bounding box všech kostek
+		var min_pos = dice_positions[0]
+		var max_pos = dice_positions[0]
 		
-		# Přizpůsob pozici kamery podle středu kostek
-		final_pos = Vector3(center.x, 6, center.z)
+		for pos in dice_positions:
+			min_pos.x = min(min_pos.x, pos.x)
+			min_pos.y = min(min_pos.y, pos.y)
+			min_pos.z = min(min_pos.z, pos.z)
+			max_pos.x = max(max_pos.x, pos.x)
+			max_pos.y = max(max_pos.y, pos.y)
+			max_pos.z = max(max_pos.z, pos.z)
+		
+		# 2. Vypočítaj střed a rozměry oblasti
+		var center = (min_pos + max_pos) / 2.0
+		var width = max_pos.x - min_pos.x
+		var height = max_pos.y - min_pos.y
+		var depth = max_pos.z - min_pos.z
+		
+		# Přidej padding (20% navíc)
+		var padding = 1.5
+		width *= padding
+		height *= padding
+		depth *= padding
+		
+		print("   Střed kostek: ", center)
+		print("   Rozměry oblasti: %.2f × %.2f × %.2f" % [width, height, depth])
+		
+		# 3. Vypočítej potřebnou vzdálenost kamery
+		# Musíme vzít v úvahu FOV a aspect ratio
+		var vertical_fov = deg_to_rad(final_fov)
+		var aspect_ratio = get_viewport().get_visible_rect().size.x / get_viewport().get_visible_rect().size.y
+		var horizontal_fov = 2.0 * atan(tan(vertical_fov / 2.0) * aspect_ratio)
+		
+		# Vypočítej vzdálenost potřebnou pro zachycení šířky
+		var horizontal_span = max(width, depth)  # Větší z x a z rozměrů
+		var distance_for_width = (horizontal_span / 2.0) / tan(horizontal_fov / 2.0)
+		
+		# Vypočítej vzdálenost potřebnou pro zachycení výšky
+		var distance_for_height = (height / 2.0) / tan(vertical_fov / 2.0)
+		
+		# Použij větší vzdálenost (aby vše bylo v záběru)
+		var required_distance = max(distance_for_width, distance_for_height)
+		
+		# Minimální vzdálenost pro bezpečnost
+		required_distance = max(required_distance, 8.0)
+		
+		print("   Vypočtená vzdálenost: %.2f" % required_distance)
+		
+		# 4. Umísti kameru nad a mírně za střed
+		# Úhel sklonu kamery (můžete upravit)
+		var camera_angle = deg_to_rad(-55)  # -55° = pohled shora
+		var camera_height = required_distance * sin(-camera_angle)
+		var camera_back = required_distance * cos(-camera_angle)
+		
+		final_pos = Vector3(
+			center.x,
+			center.y + camera_height,
+			center.z + camera_back
+		)
+		
+		final_rot = Vector3(camera_angle, 0, 0)
 	
 	if instant:
 		position = final_pos
 		rotation = final_rot
-		fov = fov_focused
+		fov = final_fov
 	else:
-		move_to(final_pos, final_rot, fov_focused)
+		move_to(final_pos, final_rot, final_fov)
 
 func move_to_shake_view(instant: bool = false):
 	"""Přesuň kameru na pohled na kelímek (pravý roh)"""

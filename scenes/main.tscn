@@ -1,5 +1,6 @@
 [gd_scene load_steps=29 format=3 uid="uid://b7m7h4qtofick"]
 
+[ext_resource type="Script" uid="uid://e8nva4cokftk" path="res://scripts/main.gd" id="1_a8y0u"]
 [ext_resource type="Script" uid="uid://xahqtpywrhur" path="res://scripts/DiceManager.gd" id="2_0wfyh"]
 [ext_resource type="Material" uid="uid://sw3c6bdtt7nn" path="res://Addons/wood_table_worn.tres" id="2_tipki"]
 [ext_resource type="Script" uid="uid://bdntqfylrgqin" path="res://scripts/game_manager.gd" id="3_tbgi4"]
@@ -7,7 +8,6 @@
 [ext_resource type="Script" uid="uid://dsbqwh8bkvngc" path="res://scripts/game_ui.gd" id="5_o6xl0"]
 [ext_resource type="Script" uid="uid://cuo3s74iioord" path="res://scripts/dice_effects.gd" id="7_ya4ey"]
 [ext_resource type="Material" uid="uid://c31e6cfikugb6" path="res://Addons/wood_cabinet_worn_long.tres" id="8_85g3d"]
-[ext_resource type="Script" uid="uid://14rx34dnef1j" path="res://scripts/dice_cup.gd" id="8_choun"]
 [ext_resource type="Script" uid="uid://dnlh0qdi4ux0n" path="res://scripts/audio_manager.gd" id="8_eb6dy"]
 [ext_resource type="AudioStream" uid="uid://d325qh0udb7g0" path="res://audio/sfx/dice_roll.ogg" id="8_trceg"]
 [ext_resource type="AudioStream" uid="uid://c4mrlpqi87jgx" path="res://audio/sfx/button_click.ogg" id="9_a8y0u"]
@@ -65,10 +65,10 @@ stream_0/stream = ExtResource("10_a8y0u")
 stream_0/volume = 0.0
 
 [node name="Main" type="Node3D"]
-script = ExtResource("8_choun")
+script = ExtResource("1_a8y0u")
 
 [node name="Camera3D" type="Camera3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 0.7071068, 0.7071068, 0, -0.7071068, 0.7071068, 0, 8, 8)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 8, 8)
 cull_mask = 1040383
 script = ExtResource("9_ya4ey")
 overview_position = Vector3(0, 16, 18)
@@ -171,3 +171,4 @@ script = ExtResource("5_o6xl0")
 
 [node name="DiceCup" parent="." instance=ExtResource("11_ya4ey")]
 transform = Transform3D(60, 0, 0, 0, 60, 0, 0, 0, 60, 15, 0, 0)
+release_timing = 0.392
