@@ -39,7 +39,7 @@ func _ready():
 	
 	# Spusť hudbu na pozadí
 	if background_music:
-		play_music()
+		play_music()		
 
 func play_sfx(sound: AudioStream, volume: float = 1.0, pitch: float = 1.0):
 	"""Přehraj zvukový efekt"""
@@ -146,3 +146,4 @@ func fade_in_music(duration: float = 1.0):
 		music_player.play()
 		var tween = create_tween()
 		tween.tween_property(music_player, "volume_db", linear_to_db(music_volume), duration)
+		

@@ -138,13 +138,13 @@ func move_to_focused(dice_positions: Array = [], instant: bool = false):
 		var required_distance = max(distance_for_width, distance_for_height)
 		
 		# Minimální vzdálenost pro bezpečnost
-		required_distance = max(required_distance, 8.0)
+		required_distance = max(required_distance, 12.0)
 		
 		print("   Vypočtená vzdálenost: %.2f" % required_distance)
 		
 		# 4. Umísti kameru nad a mírně za střed
 		# Úhel sklonu kamery (můžete upravit)
-		var camera_angle = deg_to_rad(-55)  # -55° = pohled shora
+		var camera_angle = deg_to_rad(-90)  # -55° = pohled shora
 		var camera_height = required_distance * sin(-camera_angle)
 		var camera_back = required_distance * cos(-camera_angle)
 		

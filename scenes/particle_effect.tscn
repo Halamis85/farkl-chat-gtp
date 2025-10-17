@@ -1,0 +1,33 @@
+[gd_scene load_steps=4 format=3 uid="uid://dbcnx43wurbck"]
+
+[sub_resource type="ParticleProcessMaterial" id="ParticleProcessMaterial_8xml3"]
+particle_flag_align_y = true
+angle_min = 1.0728835e-05
+angle_max = 360.00003
+initial_velocity_min = 2.0
+initial_velocity_max = 5.0
+angular_velocity_min = -3.000016
+angular_velocity_max = 2.9999838
+gravity = Vector3(0, -5, 0)
+scale_min = 0.5
+scale_max = 1.5
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_r0fxh"]
+emission_enabled = true
+emission = Color(0.74012804, 0.87371224, 0.11317324, 1)
+emission_energy_multiplier = 2.0
+
+[sub_resource type="SphereMesh" id="SphereMesh_h17wp"]
+material = SubResource("StandardMaterial3D_r0fxh")
+radius = 0.1
+height = 0.2
+
+[node name="ParticleEffect" type="GPUParticles3D"]
+transform = Transform3D(0.5, 0, 0, 0, 0.5, 0, 0, 0, 0.5, 0, 0, 0)
+visibility_range_end = 100.0
+emitting = false
+amount = 20
+lifetime = 1.5
+one_shot = true
+process_material = SubResource("ParticleProcessMaterial_8xml3")
+draw_pass_1 = SubResource("SphereMesh_h17wp")

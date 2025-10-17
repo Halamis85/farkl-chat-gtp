@@ -8,6 +8,8 @@ signal round_scored(points: int, bank: int)
 signal player_busted(player_id: int)
 signal game_won(player_id: int, final_score: int)
 signal dice_selected(selected_indices: Array)
+
+
 signal dice_reset_requested()  # Nový signál pro reset kostek
 
 # Herní konstanty
@@ -176,6 +178,7 @@ func select_dice(indices: Array) -> bool:
 	round_scored.emit(points, current_round_bank)
 	
 	current_state = GameState.WAITING
+
 	return true
 
 func bank_points():
