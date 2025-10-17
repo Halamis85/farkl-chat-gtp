@@ -92,16 +92,16 @@ func shake_on_position():
 	
 	shake_complete.emit()
 
+# ⚠️ TOTO JE SPRÁVNÁ VERZE - EMITUJ PŘÍMO Z arc_throw()
 func arc_throw():
-	"""Obloukový hod nad stůl s vysypáním"""
-	print("🌊 Házím obloukem...")
+	print("ZACATEK arc_throw")
 	
 	var start_pos = rest_position
-	var end_pos = throw_target + Vector3(0, 2.0, 0)
+	var end_pos = throw_target + Vector3(5, 6.0, 0)
 	var mid_pos = (start_pos + end_pos) / 2.0
 	mid_pos.y += arc_height
 	
-	# Fáze 1: Oblouk k nejvyššímu bodu s počátkem převrácení
+	# Faze 1: Oblouk nahoru
 	var rise_tween = create_tween()
 	rise_tween.set_parallel(true)
 	rise_tween.set_trans(Tween.TRANS_QUAD)
@@ -117,7 +117,17 @@ func arc_throw():
 	
 	await rise_tween.finished
 	
-	# Fáze 2: Dokončení převrácení a klesání nad stůl
+	print("VRCHOL DOSAZEN na pozici: ", global_position)
+	
+	# EMITUJ SIGNAL IHNED NA VRCHOLU - PRED SESTUPEN!
+	var release_position = global_position
+	print("SIGNAL emituju z VRCHOLU: ", release_position)
+	dice_released.emit(release_position)
+	
+	if is_inside_tree():
+		call_deferred("create_pour_particles")
+	
+	# Faze 2: Klesani - TEPRVE TEĎKA!
 	var pour_tween = create_tween()
 	pour_tween.set_parallel(true)
 	pour_tween.set_trans(Tween.TRANS_QUAD)
@@ -125,15 +135,13 @@ func arc_throw():
 	
 	var pour_rotation = Vector3(deg_to_rad(140), deg_to_rad(-20), deg_to_rad(70))
 	
-	pour_tween.tween_property(self, "position", end_pos, throw_duration * 0.5)
-	pour_tween.tween_property(self, "rotation", pour_rotation, throw_duration * 0.5)
-	
-	# Vysyp kostky když je kelímek dostatečně převrácený (nastavitelný timing)
-	await get_tree().create_timer(throw_duration * 0.5 * release_timing).timeout
-	release_dice()
+	pour_tween.tween_property(self, "position", end_pos, throw_duration * 0.6)
+	pour_tween.tween_property(self, "rotation", pour_rotation, throw_duration * 0.6)
 	
 	await pour_tween.finished
 	await get_tree().create_timer(0.2).timeout
+	
+	print("arc_throw HOTOVO")
 
 func return_to_rest():
 	"""Plynulý návrat na výchozí pozici"""
@@ -167,15 +175,15 @@ func return_to_rest():
 	
 	await down_tween.finished
 
+# ⚠️ TATO FUNKCE JE NYNÍ NEPOUŽITÁ - vše se dělá v arc_throw()
+# Ponechávám ji pro kompatibilitu (kdyby jsi ji měl někde jinde)
 func release_dice():
-	"""Emituj signál pro DiceManager, aby vysypal kostky"""
-	# Pošli aktuální globální pozici kelímku (kde se mají kostky spawnnout)
+	"""DEPRECATED - Nyní se používá přímý emit v arc_throw()"""
+	print("⚠️ release_dice() je zastaralá - použij emit přímo v arc_throw()")
 	dice_released.emit(global_position)
 	
 	if is_inside_tree():
 		call_deferred("create_pour_particles")
-	
-	print("🎲 Signál dice_released odeslán z pozice: ", global_position)
 
 func create_pour_particles():
 	"""Flash efekt při vysypání"""

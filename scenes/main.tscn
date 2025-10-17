@@ -171,4 +171,4 @@ script = ExtResource("5_o6xl0")
 
 [node name="DiceCup" parent="." instance=ExtResource("11_ya4ey")]
 transform = Transform3D(60, 0, 0, 0, 60, 0, 0, 0, 60, 15, 0, 0)
-release_timing = 0.392
+arc_height = 5.0

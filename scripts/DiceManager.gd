@@ -302,16 +302,23 @@ func perform_simple_throw(indices: Array):
 	
 	print("✅ Všechny kostky hozeny!")
 
+# V DiceManager.gd - NAHRAĎ show_and_throw_dice() TÍMTO (JEDINÁ VERZE!)
+
 func show_and_throw_dice(indices: Array, cup_release_position: Vector3 = Vector3.ZERO):
-	"""Zobraz kostky a hoď jimi jako z kelímku"""
-	print("🎲 Vysypávám ", indices.size(), " kostek z pozice: ", cup_release_position)
+	"""Zobraz kostky v VRCHOLU kelímku a dej jim energii dolů - FINÁLNÍ VERZE"""
 	
-	# Pokud nebyla poskytnuta pozice, použij fallback
 	if cup_release_position == Vector3.ZERO:
 		cup_release_position = Vector3(0, 3, 0)
 	
-	# Spawn bod je mírně pod kelímkem (jako by vypadávaly z otvoru)
-	var throw_origin = cup_release_position + Vector3(0, -0.8, 0)
+	print("🎲 Spawnuji kostky V VRCHOLU kelímku: ", cup_release_position)
+	
+	# Počkej aby se kelímek stačil otočit (rotace trvá 0.4s, čekáme 0.2s)
+	await get_tree().create_timer(0.4).timeout
+	
+	# Spawn bod - otvor kelímku při vrhání obloukem
+	var spawn_point = cup_release_position + Vector3(-8.1,-3.8,0.0)
+	
+	print("🌊 Spawn point (z otvoru kelímku): ", spawn_point)
 	
 	for i in range(indices.size()):
 		var idx = indices[i]
@@ -322,45 +329,48 @@ func show_and_throw_dice(indices: Array, cup_release_position: Vector3 = Vector3
 			dice.visible = true
 			dice.freeze = false
 			
-			# Nastav pozici s malým spreadem (jako by vypadávaly z kelímku)
-			var spread = Vector3(
-				randf_range(-0.4, 0.4),
-				randf_range(-0.2, 0.1),
-				randf_range(-0.4, 0.4)
+			# Spawn v MALÉ skupince z otvoru
+			var small_spread = Vector3(
+				randf_range(-3.5, 1.0), #rozptyl na délku
+				randf_range(-0.015, 0.015), #rozptyl výška
+				randf_range(-1.0, 1.0)# na šířku
 			)
-			dice.global_position = throw_origin + spread
+			dice.global_position = spawn_point + small_spread
 			
-			# Směr hodu - dolů ke středu stolu s realističtějším padáním
-			var to_center = (Vector3(0, 0, 0) - throw_origin).normalized()
-			var throw_direction = (to_center + Vector3(
-				randf_range(-0.4, 0.4),
-				randf_range(-0.8, -0.4),  # Hlavně dolů!
-				randf_range(-0.4, 0.4)
-			)).normalized()
+			# ENERGICKÁ SÍLA DOLŮ
+			var stol_center = Vector3(0, 0, 0)
+			var to_center = (stol_center - spawn_point).normalized()
 			
-			# Síla hodu
-			var throw_force = randf_range(8.0, 12.0)
+			var throw_direction = (
+				Vector3(0, -1, 0) * 0.85 +
+				to_center * 0.15
+			).normalized()
+			
+			throw_direction += Vector3(
+				randf_range(-0.1, 0.1),
+				0.0,
+				randf_range(-0.1, 0.1)
+			)
+			throw_direction = throw_direction.normalized()
+			
+			var throw_force = randf_range(10.0, 18.0)
 			dice.linear_velocity = throw_direction * throw_force
 			
-			# Silnější rotace pro efektnější hod
 			dice.angular_velocity = Vector3(
-				randf_range(-20, 20),
-				randf_range(-20, 20),
-				randf_range(-20, 20)
+				randf_range(-25, 25),
+				randf_range(-25, 25),
+				randf_range(-15, 15)
 			)
 			
-			# Řekni kostce že začala kutálení
 			dice.start_rolling()
 			
-			# Mírná prodleva mezi kostkami pro efekt vysypávání
-			await get_tree().create_timer(0.04).timeout
+			await get_tree().create_timer(0.1).timeout
 	
-	# Označ že kostky se kutálí
 	is_rolling = true
 	dice_stopped_count = 0
 	dice_rolling_started.emit()
 	
-	print("✅ Všechny kostky vysypány a začaly energicky kutálení!")
+	print("✅ Kostky vysypány z VRCHOLU kelímku s ENERGIÍ!")
 
 func _on_dice_rolling():
 	pass  # Kostka začala kutálení
