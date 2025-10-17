@@ -32,7 +32,7 @@ layout_mode = 2
 theme_override_constants/separation = 10
 
 [node name="PlayerInfo" type="Panel" parent="PanelContainer/VBoxContainer"]
-custom_minimum_size = Vector2(250, 120)
+custom_minimum_size = Vector2(250, 30)
 layout_mode = 2
 
 [node name="VBox" type="VBoxContainer" parent="PanelContainer/VBoxContainer/PlayerInfo"]
@@ -53,7 +53,7 @@ horizontal_alignment = 1
 vertical_alignment = 1
 
 [node name="RoundInfo" type="Panel" parent="PanelContainer/VBoxContainer"]
-custom_minimum_size = Vector2(250, 140)
+custom_minimum_size = Vector2(200, 140)
 layout_mode = 2
 
 [node name="VBox" type="VBoxContainer" parent="PanelContainer/VBoxContainer/RoundInfo"]
@@ -70,15 +70,18 @@ layout_mode = 2
 theme_override_colors/font_color = Color(1, 1, 0.25490198, 1)
 theme_override_font_sizes/font_size = 18
 text = "💰 Banka: 0"
+horizontal_alignment = 1
+vertical_alignment = 1
 
 [node name="AvailableDice" type="Label" parent="PanelContainer/VBoxContainer/RoundInfo/VBox"]
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_font_sizes/font_size = 16
 text = "🎲 Kostek: 6/6"
+horizontal_alignment = 1
+vertical_alignment = 1
 
 [node name="DiceProgress" type="ProgressBar" parent="PanelContainer/VBoxContainer/RoundInfo/VBox"]
-custom_minimum_size = Vector2(4, 4)
 layout_mode = 2
 allow_greater = true
 
