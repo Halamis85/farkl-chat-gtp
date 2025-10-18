@@ -11,9 +11,15 @@ config_version=5
 [application]
 
 config/name="FarklChatGTP"
-run/main_scene="uid://b7m7h4qtofick"
+run/main_scene="uid://5aa55xos3rtk"
 config/features=PackedStringArray("4.5", "Forward Plus")
 config/icon="res://icon.svg"
+
+[autoload]
+
+GameSettings="*res://scripts/game_settings.gd"
+PlayerManager="*res://scripts/player_manager.gd"
+GamePersistenceManager="*res://scripts/game_persistence_manager.gd"
 
 [display]
 

@@ -1,0 +1,302 @@
+[gd_scene load_steps=3 format=3 uid="uid://5aa55xos3rtk"]
+
+[ext_resource type="Script" uid="uid://b4y8q8oal15ju" path="res://scripts/main_menu.gd" id="1_l6cm7"]
+[ext_resource type="Texture2D" uid="uid://b8ortfib2oxsg" path="res://Addons/textures/back_menu.jpg" id="2_ekxnf"]
+
+[node name="MainMenu" type="Node"]
+script = ExtResource("1_l6cm7")
+
+[node name="Background" type="TextureRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_right = 40.0
+offset_bottom = 40.0
+texture = ExtResource("2_ekxnf")
+expand_mode = 1
+stretch_mode = 2
+
+[node name="MainPanel" type="CenterContainer" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBox" type="VBoxContainer" parent="MainPanel"]
+layout_mode = 2
+theme_override_constants/separation = 15
+alignment = 1
+
+[node name="Title" type="Label" parent="MainPanel/VBox"]
+custom_minimum_size = Vector2(0, 80)
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 0.40018785, 1)
+theme_override_font_sizes/font_size = 49
+text = "🎲 FARKLE"
+horizontal_alignment = 1
+
+[node name="BtnNewGame" type="Button" parent="MainPanel/VBox"]
+custom_minimum_size = Vector2(200, 60)
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
+text = "🎮 Nová hra"
+
+[node name="BtnLoadGame" type="Button" parent="MainPanel/VBox"]
+custom_minimum_size = Vector2(200, 60)
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
+text = "📂 Pokračovat"
+
+[node name="BtnStatistics" type="Button" parent="MainPanel/VBox"]
+custom_minimum_size = Vector2(200, 60)
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
+text = "📊 Statistiky"
+
+[node name="BtnSettings" type="Button" parent="MainPanel/VBox"]
+custom_minimum_size = Vector2(200, 60)
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
+text = "⚙️ Nastavení"
+
+[node name="BtnQuit" type="Button" parent="MainPanel/VBox"]
+custom_minimum_size = Vector2(200, 60)
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
+text = "❌ Ukončit"
+
+[node name="RegisterPanel" type="CenterContainer" parent="."]
+visible = false
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBox" type="VBoxContainer" parent="RegisterPanel"]
+layout_mode = 2
+theme_override_constants/separation = 15
+alignment = 1
+
+[node name="Title" type="Label" parent="RegisterPanel/VBox"]
+custom_minimum_size = Vector2(0, 80)
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 0.40018785, 1)
+theme_override_font_sizes/font_size = 49
+text = "📝 Registrace"
+horizontal_alignment = 1
+
+[node name="UsernameInput" type="LineEdit" parent="RegisterPanel/VBox"]
+custom_minimum_size = Vector2(300, 50)
+layout_mode = 2
+placeholder_text = "Uživatelské jméno (3+ znaky)"
+
+[node name="DisplayNameInput" type="LineEdit" parent="RegisterPanel/VBox"]
+custom_minimum_size = Vector2(300, 50)
+layout_mode = 2
+placeholder_text = "Vaše jméno"
+
+[node name="ErrorLabel" type="Label" parent="RegisterPanel/VBox"]
+custom_minimum_size = Vector2(300, 40)
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.4, 0.4, 1)
+
+[node name="BtnRegister" type="Button" parent="RegisterPanel/VBox"]
+custom_minimum_size = Vector2(300, 60)
+layout_mode = 2
+text = "✅ Zaregistrovat"
+
+[node name="BtnBack" type="Button" parent="RegisterPanel/VBox"]
+custom_minimum_size = Vector2(300, 60)
+layout_mode = 2
+text = "← Zpět
+"
+
+[node name="SelectPlayerPanel" type="CenterContainer" parent="."]
+visible = false
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBox" type="VBoxContainer" parent="SelectPlayerPanel"]
+layout_mode = 2
+theme_override_constants/separation = 15
+alignment = 1
+
+[node name="Title" type="Label" parent="SelectPlayerPanel/VBox"]
+custom_minimum_size = Vector2(0, 80)
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 0.40018785, 1)
+theme_override_font_sizes/font_size = 49
+text = "👤 Vyberte hráče"
+horizontal_alignment = 1
+
+[node name="ScrollContainer" type="ScrollContainer" parent="SelectPlayerPanel/VBox"]
+custom_minimum_size = Vector2(400, 300)
+layout_mode = 2
+
+[node name="PlayerListContainer" type="VBoxContainer" parent="SelectPlayerPanel/VBox/ScrollContainer"]
+layout_mode = 2
+
+[node name="BtnNewPlayer" type="Button" parent="SelectPlayerPanel/VBox"]
+custom_minimum_size = Vector2(400, 60)
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
+text = "➕ Nový hráč"
+
+[node name="BtnBack" type="Button" parent="SelectPlayerPanel/VBox"]
+custom_minimum_size = Vector2(400, 60)
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
+text = "← Zpět"
+
+[node name="GameSetupPanel" type="CenterContainer" parent="."]
+visible = false
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBox" type="VBoxContainer" parent="GameSetupPanel"]
+layout_mode = 2
+theme_override_constants/separation = 15
+alignment = 1
+
+[node name="Title" type="Label" parent="GameSetupPanel/VBox"]
+custom_minimum_size = Vector2(0, 80)
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 0.40018785, 1)
+theme_override_font_sizes/font_size = 49
+text = "🎮 Příprava hry"
+horizontal_alignment = 1
+
+[node name="LblPlayer" type="Label" parent="GameSetupPanel/VBox"]
+custom_minimum_size = Vector2(400, 50)
+layout_mode = 2
+text = "👤 Hráč: ..."
+
+[node name="ModeSelection" type="HBoxContainer" parent="GameSetupPanel/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="BtnSinglePlayer" type="Button" parent="GameSetupPanel/VBox/ModeSelection"]
+custom_minimum_size = Vector2(120, 50)
+layout_mode = 2
+text = "👤 Single"
+
+[node name="BtnMultiPlayer" type="Button" parent="GameSetupPanel/VBox/ModeSelection"]
+custom_minimum_size = Vector2(120, 50)
+layout_mode = 2
+text = "👥 Local"
+
+[node name="BtnOnlineMulti" type="Button" parent="GameSetupPanel/VBox/ModeSelection"]
+custom_minimum_size = Vector2(120, 50)
+layout_mode = 2
+text = "🌐 Online"
+
+[node name="BtnStartGame" type="Button" parent="GameSetupPanel/VBox"]
+custom_minimum_size = Vector2(400, 60)
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
+text = "🎲 Spustit hru"
+
+[node name="BtnBack" type="Button" parent="GameSetupPanel/VBox"]
+custom_minimum_size = Vector2(400, 60)
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
+text = "← Zpět"
+
+[node name="StatisticsPanel" type="CenterContainer" parent="."]
+visible = false
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBox" type="VBoxContainer" parent="StatisticsPanel"]
+layout_mode = 2
+theme_override_constants/separation = 15
+alignment = 1
+
+[node name="Title" type="Label" parent="StatisticsPanel/VBox"]
+custom_minimum_size = Vector2(0, 80)
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 0.40018785, 1)
+theme_override_font_sizes/font_size = 49
+text = "📊 Statistiky"
+horizontal_alignment = 1
+
+[node name="LblPlayer" type="Label" parent="StatisticsPanel/VBox"]
+custom_minimum_size = Vector2(400, 50)
+layout_mode = 2
+text = "📊 Statistiky: ..."
+
+[node name="ScrollContainer" type="ScrollContainer" parent="StatisticsPanel/VBox"]
+custom_minimum_size = Vector2(400, 250)
+layout_mode = 2
+
+[node name="StatsList" type="VBoxContainer" parent="StatisticsPanel/VBox/ScrollContainer"]
+layout_mode = 2
+
+[node name="BtnBack" type="Button" parent="StatisticsPanel/VBox"]
+custom_minimum_size = Vector2(400, 60)
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
+text = "← Zpět"
+
+[node name="SettingsPanel" type="CenterContainer" parent="."]
+visible = false
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBox" type="VBoxContainer" parent="SettingsPanel"]
+layout_mode = 2
+theme_override_constants/separation = 15
+alignment = 1
+
+[node name="Title" type="Label" parent="SettingsPanel/VBox"]
+custom_minimum_size = Vector2(0, 80)
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 0.40018785, 1)
+theme_override_font_sizes/font_size = 49
+text = "⚙️ Nastavení"
+horizontal_alignment = 1
+
+[node name="LblPlayer" type="Label" parent="SettingsPanel/VBox"]
+custom_minimum_size = Vector2(400, 50)
+layout_mode = 2
+text = "⚙️ Nastavení: ...
+"
+
+[node name="VolumeLabel" type="Label" parent="SettingsPanel/VBox"]
+layout_mode = 2
+text = "🔊 Hlasitost:"
+
+[node name="VolumeSlider" type="HSlider" parent="SettingsPanel/VBox"]
+custom_minimum_size = Vector2(400, 60)
+layout_mode = 2
+value = 80.0
+
+[node name="BtnDeletePlayer" type="Button" parent="SettingsPanel/VBox"]
+custom_minimum_size = Vector2(400, 60)
+layout_mode = 2
+text = "🗑️ Smazat hráče"
+
+[node name="BtnResetSettings" type="Button" parent="SettingsPanel/VBox"]
+custom_minimum_size = Vector2(400, 60)
+layout_mode = 2
+text = "🔄 Resetovat"
+
+[node name="BtnBack" type="Button" parent="SettingsPanel/VBox"]
+custom_minimum_size = Vector2(400, 60)
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
+text = "← Zpět"
