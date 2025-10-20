@@ -25,18 +25,16 @@ func _ready():
 		print("⚠️ Audio Manager nenalezen")
 	
 	# KROK 2: Načti FloatingScore scénu
-	print("\n🎯 Hledání FloatingScore scény...")
 	floating_score_scene = load("res://scenes/floating_score.tscn")
 	if floating_score_scene:
-		print("✅ FloatingScore scéna načtena")
+		print()
 	else:
 		print("❌ FloatingScore scéna NENALEZENA! (res://scenes/floating_score.tscn)")
 	
 	# KROK 3: Načti ParticleEffect scénu
-	print("\n💥 Hledání ParticleEffect scény...")
 	particle_effect_scene = load("res://scenes/particle_effect.tscn")
 	if particle_effect_scene:
-		print("✅ ParticleEffect scéna načtena")
+		print()
 	else:
 		print("⚠️ ParticleEffect scéna nenalezena (volitelné)")
 	
@@ -68,16 +66,12 @@ func _on_round_scored(points: int, bank: int):
 	print("\n⭐ _on_round_scored: points=" + str(points) + ", bank=" + str(bank))
 	
 	if points <= 0:
-		print("  ⚠️ Body <= 0, skipping")
 		return
 	
 	if not floating_score_scene:
-		print("  ❌ FloatingScore scéna není načtena!")
 		return
 	
-	print("  → Vytváření FloatingScore...")
-	
-	# 1. Vytvoř floating score na středu stolu
+	# 1. Vytvoř floating score
 	var table_center = Vector3(9.0, 2.0, -6.0)
 	var floating = floating_score_scene.instantiate()
 	main.add_child(floating)
@@ -86,8 +80,6 @@ func _on_round_scored(points: int, bank: int):
 	floating.set_rise_height(2.0)  #Zvedne se vyšší
 	floating.set_text_size(6.0) # Větší text
 	floating.set_score_text(points, true, Color.YELLOW)
-	
-	print("  ✅ FloatingScore vytvořen na pozici: " + str(table_center))
 	
 	# 2. Zvuk
 	if audio_manager and audio_manager.has_method("play_score"):
@@ -107,14 +99,14 @@ func _on_player_busted(_player_id: int):
 		return
 	
 	# 1. Velké červené texty
-	var table_center = Vector3(0, 1.5, 0)
+	var table_center = Vector3(0, 2.5, 0)
 	var farkle_text = floating_score_scene.instantiate()
 	main.add_child(farkle_text)
+	farkle_text.set_duration(6.5)#Bude vidět 
+	farkle_text.set_rise_height(2.0) #Zvedne se vyšší
 	farkle_text.global_position = table_center
 	farkle_text.set_score_text(0, false, Color.RED)
-	farkle_text.set_text_size(4.0)
-	
-	print("  ✅ FARKLE text vytvořen")
+	farkle_text.set_text_size(6.0)# Větší text
 	
 	# 2. Zvuk
 	if audio_manager and audio_manager.has_method("play_farkle"):
@@ -140,8 +132,8 @@ func create_screen_flash(color: Color, duration: float):
 	var flash_rect = ColorRect.new()
 	get_tree().get_root().add_child(flash_rect)
 	flash_rect.color = color
-	flash_rect.anchor_right = 1.0
-	flash_rect.anchor_bottom = 1.0
+	flash_rect.anchor_right = 4.0
+	flash_rect.anchor_bottom = 4.0
 	
 	if tween:
 		tween.kill()

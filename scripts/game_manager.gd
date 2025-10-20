@@ -1,3 +1,4 @@
+# scripts/game_manager.gd
 extends Node
 
 class_name GameManager
@@ -8,15 +9,11 @@ signal round_scored(points: int, bank: int)
 signal player_busted(player_id: int)
 signal game_won(player_id: int, final_score: int)
 signal dice_selected(selected_indices: Array)
+signal dice_reset_requested()
 
-
-signal dice_reset_requested()  # Nový signál pro reset kostek
-
-# Herní konstanty
-const MIN_SCORE_TO_ENTER = 500  # Minimální skóre pro první vstup do hry
+const MIN_SCORE_TO_ENTER = 500
 const WINNING_SCORE = 10000
 
-# Herní stav
 enum GameState {
 	WAITING,
 	ROLLING,
@@ -29,32 +26,75 @@ var current_state: GameState = GameState.WAITING
 var current_player: int = 0
 var num_players: int = 2
 
-# Data hráčů
-var player_scores: Array = []  # Celkové skóre každého hráče
+var player_scores: Array = []
 var player_names: Array = []
-var player_has_entered: Array = []  # Zda hráč již vstoupil do hry (dal 500+)
+var player_has_entered: Array = []
+var is_ai: Array = []
+var ai_players: Array = []
 
-# Aktuální kolo
-var current_round_bank: int = 0  # Body v aktuálním kole (ještě nezapsané)
-var available_dice: int = 6  # Kolik kostek je k dispozici
-var selected_dice_indices: Array = []  # Indexy vybraných kostek
+var current_round_bank: int = 0
+var available_dice: int = 6
+var selected_dice_indices: Array = []
 var last_roll_values: Array = []
 var last_roll_result: Dictionary = {}
+
+var dice_manager: DiceManager = null
 
 func _ready():
 	pass
 
-func start_new_game(players: int = 2, names: Array = []):
-	"""Začni novou hru"""
+func init_with_ai(game_config: Dictionary) -> void:
+	print("\n" + "=".repeat(60))
+	print("🎲 INICIALIZACE HRY S AI")
+	print("=".repeat(60))
+	
+	var mode = game_config.get("mode", "single")
+	var current_player_name = game_config.get("current_player_display", "Hráč")
+	var ai_count = game_config.get("ai_count", 1)
+	var players_count = game_config.get("players_count", 2)
+	
+	var player_names_list = [current_player_name]
+	var is_ai_list = [false]
+	var ai_levels = []
+	
+	print("Režim: ", mode)
+	print("Aktuální hráč: ", current_player_name)
+	print("AI hráči: ", ai_count)
+	
+	match mode:
+		"single":
+			player_names_list.append("AI")
+			is_ai_list.append(true)
+			ai_levels.append(AIPlayer.AILevel.NORMAL)
+		"local":
+			for i in range(1, players_count):
+				player_names_list.append("Hráč " + str(i + 1))
+				is_ai_list.append(false)
+		"online":
+			player_names_list.append("Online Hráč")
+			is_ai_list.append(false)
+	
+	start_new_game(player_names_list.size(), player_names_list, is_ai_list, ai_levels)
+
+func start_new_game(players: int = 2, names: Array = [], ai_flags: Array = [], ai_levels: Array = []):
+	print("\n" + "=".repeat(60))
+	print("🎲 NOVÁ HRA SPOUŠTĚNA")
+	print("=".repeat(60))
+	
 	num_players = players
 	current_player = 0
 	current_state = GameState.WAITING
 	
-	# Inicializuj hráče
 	player_scores.clear()
 	player_names.clear()
 	player_has_entered.clear()
+	is_ai.clear()
+	ai_players.clear()
 	
+	if not dice_manager:
+		dice_manager = get_node_or_null("/root/Main/DiceManager")
+	
+	var ai_index = 0
 	for i in range(num_players):
 		player_scores.append(0)
 		player_has_entered.append(false)
@@ -63,55 +103,102 @@ func start_new_game(players: int = 2, names: Array = []):
 			player_names.append(names[i])
 		else:
 			player_names.append("Hráč " + str(i + 1))
+		
+		var is_ai_player = false
+		if i < ai_flags.size():
+			is_ai_player = ai_flags[i]
+		
+		is_ai.append(is_ai_player)
+		
+		if is_ai_player:
+			var ai_level = AIPlayer.AILevel.NORMAL
+			if ai_index < ai_levels.size():
+				ai_level = ai_levels[ai_index]
+			
+			var ai = AIPlayer.new()
+			ai.init(self, dice_manager, ai_level)
+			add_child(ai)
+			ai_players.append(ai)
+			
+			print("✅ AI hráč: ", player_names[i], " (", AIPlayer.AILevel.keys()[ai_level], ")")
+			ai_index += 1
+		else:
+			ai_players.append(null)
+			print("👤 Hráč: ", player_names[i])
 	
+	print("=".repeat(60) + "\n")
 	start_turn()
 
 func start_turn():
 	"""Začni tah aktuálního hráče"""
+	print("\n" + "=".repeat(60))
+	print("🎮 NOVÝ TÁH")
+	print("=".repeat(60))
+	
 	current_round_bank = 0
 	available_dice = 6
 	selected_dice_indices.clear()
+	last_roll_values.clear()
+	last_roll_result.clear()
 	current_state = GameState.WAITING
 	
-	turn_started.emit(current_player)
-	print("\n=== TAH HRÁČE: ", player_names[current_player], " ===")
-	print("Celkové skóre: ", player_scores[current_player])
+	# ⚠️ OPRAVA: Volej clear_all_for_new_turn() místo clear_selection()
+	if dice_manager:
+		print("🧹 Resetuji DiceManager pro nový tah...")
+		dice_manager.clear_all_for_new_turn()
 	
-	# Vrať všechny kostky na původní pozice
-	emit_signal("dice_reset_requested")
+	var player_type = "👤 Hráč" if not is_ai[current_player] else "🤖 AI"
+	print(player_type + ": ", player_names[current_player])
+	print("Skóre: ", player_scores[current_player])
+	print("=".repeat(60) + "\n")
+	
+	turn_started.emit(current_player)
+	dice_reset_requested.emit()
+	
+	if is_ai[current_player]:
+		var ai = ai_players[current_player]
+		if ai:
+			ai.make_decision_roll()
 
 func roll_dice() -> bool:
-	"""Hoď dostupnými kostkami"""
 	if current_state == GameState.ROLLING:
+		print("❌ Nelze házet - už se hází!")
 		return false
 	
 	if available_dice <= 0:
-		print("Žádné kostky k hození!")
+		print("❌ Žádné kostky k hození!")
 		return false
 	
+	print("\n🎲 ROLL: Házím ", available_dice, " kostkami")
+	print("   Zabanované indexy: ", selected_dice_indices)
+	
 	current_state = GameState.ROLLING
-	selected_dice_indices.clear()
 	return true
 
 func on_dice_rolled(values: Array):
-	"""Zpracuj výsledek hodu kostkami"""
+	"""Zpracuj výsledek hodu"""
 	last_roll_values = values
 	
-	# Vyhodnoť JEN ty kostky, které se právě házely (nejsou v selected_dice_indices)
 	var rolled_values = []
 	var rolled_indices = []
+	
+	print("\n" + "=".repeat(60))
+	print("🎲 VÝSLEDEK HODU")
+	print("=".repeat(60))
+	print("Všechny kostky: ", values)
+	print("Zabanované indexy: ", selected_dice_indices)
 	
 	for i in range(values.size()):
 		if not selected_dice_indices.has(i):
 			rolled_values.append(values[i])
 			rolled_indices.append(i)
 	
-	print("\nHod (jen házené kostky): ", rolled_values)
-	print("Indexy hozených kostek: ", rolled_indices)
+	print("\nHodnuté kostky (bez banku):")
+	print("  Hodnoty: ", rolled_values)
+	print("  Indexy: ", rolled_indices)
 	
 	last_roll_result = FarkleRules.evaluate_dice(rolled_values)
 	
-	# Přemapuj indexy z rolled_values zpět na původní indexy
 	var remapped_scoring = []
 	for local_idx in last_roll_result.available_dice:
 		if local_idx < rolled_indices.size():
@@ -119,40 +206,74 @@ func on_dice_rolled(values: Array):
 	
 	last_roll_result.available_dice = remapped_scoring
 	
-	# Zkontroluj FARKLE
+	print("\n📊 VYHODNOCENÍ:")
+	
 	if last_roll_result.is_farkle:
-		print("❌ FARKLE! Žádné body z kola ztraceny!")
+		print("❌ FARKLE! Žádné body!")
+		print("=".repeat(60) + "\n")
 		handle_farkle()
 		return
 	
-	print("✓ Body z hodu: ", last_roll_result.total_score)
-	print("Kombinace: ", last_roll_result.scoring_combinations)
-	print("Bodující indexy: ", last_roll_result.available_dice)
-	print("⚠️ MUSÍŠ vybrat alespoň některé bodující kostky!")
+	print("✅ Body: ", last_roll_result.total_score)
+	print("   Kombinace: ", last_roll_result.scoring_combinations)
+	print("   Bodující indexy: ", last_roll_result.available_dice)
+	print("=".repeat(60) + "\n")
 	
 	current_state = GameState.SELECTING
+	
+	if is_ai[current_player]:
+		var ai = ai_players[current_player]
+		if ai:
+			ai.make_decision_select(last_roll_result.available_dice)
 
 func select_dice(indices: Array) -> bool:
-	"""
-	Vyber kostky, které chceš započítat.
-	indices: pole indexů vybraných kostek (0-5)
-	"""
+	"""Vyber kostky které chceš započítat"""
+	print("\n" + "=".repeat(60))
+	print("✅ VÝBĚR KOSTEK")
+	print("=".repeat(60))
+	print("Hráč vybírá: ", indices)
+	
 	if current_state != GameState.SELECTING:
+		print("❌ Chyba: Nejsi ve stavu SELECTING!")
+		print("=".repeat(60) + "\n")
 		return false
 	
-	# Ověř, že vybrané kostky skutečně bodují
+	# Ověř že vybrané kostky bodují
 	var scoring_dice = last_roll_result.available_dice
+	print("Bodující indexy: ", scoring_dice)
+	
 	for idx in indices:
 		if not scoring_dice.has(idx):
-			print("Kostka ", idx, " neboduje!")
+			print("❌ Kostka ", idx, " NEBODUJE!")
+			print("=".repeat(60) + "\n")
 			return false
 	
-	# Přidej vybrané indexy k již vybraným z předchozích hodů
+	# ⚠️ KONTROLA: Pokud hráč vybral JEN NĚKTERÉ bodující kostky
+	# a zbylé kostky NEBODUJÍ → bude FARKLE při dalším hodu!
+	var remaining_indices = []
+	for i in range(last_roll_values.size()):
+		if not selected_dice_indices.has(i) and not indices.has(i):
+			remaining_indices.append(i)
+	
+	if remaining_indices.size() > 0:
+		# Zkontroluj jestli zbylé kostky bodují
+		var remaining_values = []
+		for idx in remaining_indices:
+			remaining_values.append(last_roll_values[idx])
+		
+		var remaining_result = FarkleRules.evaluate_dice(remaining_values)
+		
+		if remaining_result.is_farkle:
+			print("⚠️ VAROVÁNÍ: Zbývající kostky NEBODUJÍ!")
+			print("   Pokud házíte znovu → automaticky FARKLE!")
+			print("   Doporučujeme ULOŽIT BODY!")
+	
+	# Přidej vybrané indexy
 	for idx in indices:
 		if not selected_dice_indices.has(idx):
 			selected_dice_indices.append(idx)
 	
-	# Vypočítej body jen z nyní vybraných kostek
+	# Vypočítej body
 	var selected_values = []
 	for idx in indices:
 		selected_values.append(last_roll_values[idx])
@@ -163,75 +284,86 @@ func select_dice(indices: Array) -> bool:
 	current_round_bank += points
 	available_dice -= indices.size()
 	
-	# Pokud použil všechny kostky, dostane je zpět (hot hand)
-	if available_dice == 0:
-		available_dice = 6
-		selected_dice_indices.clear()  # Reset vybraných kostek
-		print("🔥 HOT HAND! Všechny kostky zpět!")
+	print("✅ Zabanované kostky: ", selected_dice_indices)
+	print("   Přidáno do banky: +", points)
+	print("   Banka kola: ", current_round_bank)
+	print("   Zbývá kostek: ", available_dice)
 	
-	print("Přidáno do banky: ", points)
-	print("Banka kola: ", current_round_bank)
-	print("Zbývá kostek: ", available_dice)
-	print("Vybrané indexy celkem: ", selected_dice_indices)
+	# ⚠️ HOT HAND - všechny kostky použity!
+	if available_dice == 0:
+		print("\n🔥 HOT HAND! Všechny kostky zpět!")
+		available_dice = 6
+		selected_dice_indices.clear()
+		
+		# ⚠️ RESET DiceManager - vrať kostky zpět!
+		if dice_manager:
+			dice_manager.clear_all_for_new_turn()
+	
+	print("=".repeat(60) + "\n")
 	
 	dice_selected.emit(selected_dice_indices)
 	round_scored.emit(points, current_round_bank)
 	
 	current_state = GameState.WAITING
-
+	
+	if is_ai[current_player]:
+		var ai = ai_players[current_player]
+		if ai:
+			ai.make_decision_roll()
+	
 	return true
 
-func bank_points():
-	"""Ulož body z kola a ukonči tah"""
+func bank_points() -> bool:
+	print("\n" + "=".repeat(60))
+	print("💾 ULOŽENÍ BODŮ")
+	print("=".repeat(60))
+	
 	if current_round_bank <= 0:
-		print("Nemáš co uložit!")
+		print("❌ Nemáš co uložit!")
+		print("=".repeat(60) + "\n")
 		return false
 	
-	# Kontrola vstupu do hry
 	if not player_has_entered[current_player]:
 		if current_round_bank < MIN_SCORE_TO_ENTER:
-			print("Potřebuješ minimálně ", MIN_SCORE_TO_ENTER, " bodů pro vstup!")
+			print("❌ Potřebuješ min. ", MIN_SCORE_TO_ENTER, " bodů pro vstup!")
+			print("=".repeat(60) + "\n")
 			return false
 		else:
 			player_has_entered[current_player] = true
-			print("✓ Hráč vstoupil do hry!")
+			print("✅ Hráč vstoupil do hry!")
 	
-	# Přidej body
 	player_scores[current_player] += current_round_bank
 	var total = player_scores[current_player]
 	
-	print("\n💰 Uloženo: ", current_round_bank, " bodů")
-	print("Celkem: ", total)
+	print("Kolo: +", current_round_bank, " bodů")
+	print("Celkem: ", total, " bodů")
+	print("=".repeat(60) + "\n")
 	
 	turn_ended.emit(current_player, total)
 	
-	# Kontrola výhry
 	if total >= WINNING_SCORE:
 		end_game()
 		return true
 	
-	# Další hráč
 	next_player()
 	return true
 
 func handle_farkle():
-	"""Zpracuj Farkle (ztráta všech bodů)"""
+	print("🚫 FARKLE ZPRACOVÁNÍ")
+	print("   Banka kola vynulována: ", current_round_bank, " → 0")
+	
 	current_round_bank = 0
 	player_busted.emit(current_player)
 	
-	# Další hráč
 	next_player()
 
 func next_player():
-	"""Přepni na dalšího hráče"""
 	current_player = (current_player + 1) % num_players
 	start_turn()
 
 func end_game():
-	"""Ukonči hru"""
 	current_state = GameState.GAME_OVER
 	
-	# Najdi vítěze
 	var winner = 0
 	var max_score = player_scores[0]
 	
@@ -240,10 +372,17 @@ func end_game():
 			max_score = player_scores[i]
 			winner = i
 	
-	print("\n🏆 VÝHRA! ", player_names[winner], " vyhrává s ", max_score, " body!")
+	print("\n" + "=".repeat(60))
+	print("🏆 VÍTĚZSTVÍ!")
+	print("=".repeat(60))
+	print("Vítěz: ", player_names[winner])
+	print("Skóre: ", max_score)
+	print("=".repeat(60) + "\n")
+	
 	game_won.emit(winner, max_score)
 
-# Getter funkce
+# ============ GETTERS ============
+
 func get_current_player_name() -> String:
 	return player_names[current_player]
 
@@ -257,6 +396,9 @@ func get_current_bank() -> int:
 
 func get_available_dice() -> int:
 	return available_dice
+
+func is_current_player_ai() -> bool:
+	return is_ai[current_player] if current_player < is_ai.size() else false
 
 func can_roll() -> bool:
 	return current_state == GameState.WAITING and available_dice > 0

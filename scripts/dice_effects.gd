@@ -16,8 +16,8 @@ func create_particle_systems():
 	dust_particles = GPUParticles3D.new()
 	dust_particles.emitting = false
 	dust_particles.one_shot = true
-	dust_particles.explosiveness = 0.8
-	dust_particles.amount = 20
+	dust_particles.explosiveness = 1.8
+	dust_particles.amount = 40
 	dust_particles.lifetime = 0.5
 	add_child(dust_particles)
 	

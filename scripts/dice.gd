@@ -24,27 +24,50 @@ var face_normals = {
 }
 
 func _ready():
-	# Nastavení fyziky pro realistické chování
+	# Nastavení fyziky pro LEPŠÍ KUTÁLENÍ
 	contact_monitor = true
-	max_contacts_reported = 4
+	max_contacts_reported = 5
 	
 	gravity_scale = 1.0 
-	# Fyzikální vlastnosti
-	mass = 0.015  # Lehká kostka (15g)
+	
+	# ⚠️ UPRAVENÉ HODNOTY pro lepší rozptyl:
+	mass = 0.010  # Lehčí kostka 0.012
+	
 	physics_material_override = PhysicsMaterial.new()
-	physics_material_override.friction = 0.7  # Tření
-	physics_material_override.bounce = 0.2  # Trochu poskakování
+	physics_material_override.friction = 0.3  # z 0.4 - míň tření
+	physics_material_override.bounce = 0.3   # ZVÝŠENO z 0.2 - víc poskakování
 	
-	linear_damp = 1.0  # Rychlejší zpomalení lineárního pohybu
-	angular_damp = 2.0  # Rychlejší zpomalení rotace
+	linear_damp = 0.5   # SNÍŽENO z 0.6 - kostky se kutálí dál
+	angular_damp = 1.5  # SNÍŽENO z 2.0 - víc rotace
 	
-	# Najdi prstenec vytvořený v editoru
+	# Najdi prstenec
 	if has_node("SelectionRing"):
 		selection_ring = $SelectionRing
 		selection_ring.visible = false
 	else:
-		# Pokud neexistuje, vytvoř ho programově
 		create_selection_ring()
+	
+	print("🎲 Kostka nastavena pro dynamické kutálení")
+
+# BONUS: Pro ještě lepší efekt můžeš přidat "secondary bounce"
+# Přidej tuto funkci do dice.gd:
+
+func _integrate_forces(state: PhysicsDirectBodyState3D):
+	"""Přidá malý náhodný impulz při nárazu pro lepší rozptyl"""
+	if is_rolling:
+		# Když kostka narazí, přidej malou náhodnou sílu
+		if state.get_contact_count() > 0:
+			var contact_impulse = state.get_contact_impulse(0)
+			
+			# Pokud byl náraz dost silný
+			if contact_impulse.length() > 0.5:
+				# Přidej malou náhodnou sílu do strany
+				var random_push = Vector3(
+					randf_range(-0.3, 0.3),
+					randf_range(0, 0.2),
+					randf_range(-0.3, 0.3)
+				)
+				apply_central_impulse(random_push)
 
 func show_and_activate():
 	"""Zobraz kostku a aktivuj fyziku"""
@@ -180,7 +203,7 @@ func roll(impulse_strength: float = 3.0):
 	# Směr hodu
 	var throw_direction = Vector3(
 		randf_range(-1.0, 1.0),
-		randf_range(0.3, 0.7),
+		randf_range(0.4, 0.9),
 		randf_range(-1.0, 1.0)
 	).normalized()
 	

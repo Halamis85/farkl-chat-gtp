@@ -1,9 +1,10 @@
-[gd_scene load_steps=32 format=3 uid="uid://b7m7h4qtofick"]
+[gd_scene load_steps=35 format=3 uid="uid://b7m7h4qtofick"]
 
 [ext_resource type="Script" uid="uid://e8nva4cokftk" path="res://scripts/main.gd" id="1_a8y0u"]
 [ext_resource type="Script" uid="uid://xahqtpywrhur" path="res://scripts/DiceManager.gd" id="2_0wfyh"]
 [ext_resource type="Script" uid="uid://bdntqfylrgqin" path="res://scripts/game_manager.gd" id="3_tbgi4"]
 [ext_resource type="PackedScene" uid="uid://b7v476mpp1mce" path="res://scenes/game_ui.tscn" id="4_tefeu"]
+[ext_resource type="Material" uid="uid://sw3c6bdtt7nn" path="res://Addons/wood_table_worn.tres" id="5_dp3eg"]
 [ext_resource type="Script" uid="uid://cuo3s74iioord" path="res://scripts/dice_effects.gd" id="7_ya4ey"]
 [ext_resource type="Material" uid="uid://c31e6cfikugb6" path="res://Addons/wood_cabinet_worn_long.tres" id="8_85g3d"]
 [ext_resource type="Script" uid="uid://dnlh0qdi4ux0n" path="res://scripts/audio_manager.gd" id="8_eb6dy"]
@@ -13,10 +14,15 @@
 [ext_resource type="Script" uid="uid://c06qq7i0o6ndu" path="res://scripts/camera_controller.gd" id="9_ya4ey"]
 [ext_resource type="AudioStream" uid="uid://dblw44wbqamsc" path="res://audio/sfx/dice_shake.ogg" id="10_a8y0u"]
 [ext_resource type="AudioStream" uid="uid://ddbaw0gnbjvbt" path="res://audio/sfx/points_scored.ogg" id="11_dp3eg"]
-[ext_resource type="PackedScene" uid="uid://caayhiwyisq3k" path="res://Addons/kelimek.glb" id="11_ya4ey"]
 [ext_resource type="Script" uid="uid://du51clmvopkqb" path="res://scenes/ui_effects_manager.gd" id="15_jbj1t"]
+[ext_resource type="PackedScene" uid="uid://cxynio0d2samn" path="res://Addons/textures/cup_dice.glb" id="17_0ld40"]
 [ext_resource type="FontFile" uid="uid://cxuo3nlinnhth" path="res://Addons/Font/Diploma/diploma.ttf" id="17_dp3eg"]
 [ext_resource type="Script" uid="uid://ddsx81g0410oy" path="res://scripts/table_player_name_3d.gd" id="17_muem4"]
+[ext_resource type="PackedScene" uid="uid://cl65qwvvlca5j" path="res://Addons/textures/beer.glb" id="19_0ld40"]
+
+[sub_resource type="PhysicsMaterial" id="PhysicsMaterial_muem4"]
+friction = 0.6
+bounce = 0.15
 
 [sub_resource type="BoxMesh" id="BoxMesh_sgp6g"]
 material = ExtResource("8_85g3d")
@@ -59,7 +65,7 @@ size = Vector3(22, 10, 0.5)
 [sub_resource type="Compositor" id="Compositor_o6xl0"]
 
 [sub_resource type="BoxMesh" id="BoxMesh_tipki"]
-material = ExtResource("8_85g3d")
+material = ExtResource("5_dp3eg")
 size = Vector3(50, 10, 30)
 
 [sub_resource type="AudioStreamSynchronized" id="AudioStreamSynchronized_a8y0u"]
@@ -75,16 +81,15 @@ script = ExtResource("1_a8y0u")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 8, 8)
 cull_mask = 1040383
 script = ExtResource("9_ya4ey")
-overview_position = Vector3(0, 16, 18)
-overview_rotation = Vector3(-0.8, 0, 0)
-focused_position = Vector3(0, 10, 1)
-shake_position = Vector3(-4, 7, 10)
-shake_rotation = Vector3(-0.655, -0.436, 0)
-smooth_speed = 2.0
+shake_position = Vector3(9, 2, 12)
+shake_rotation = Vector3(-0.1, 0.4, 0)
 
 [node name="Table" type="StaticBody3D" parent="."]
+physics_interpolation_mode = 1
+physics_material_override = SubResource("PhysicsMaterial_muem4")
 
 [node name="MeshInstance3D" type="MeshInstance3D" parent="Table"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.09241402, -0.0790205, 0.11758852)
 mesh = SubResource("BoxMesh_sgp6g")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Table"]
@@ -154,7 +159,7 @@ spot_range = 6.9287558
 spot_angle = 24.477222
 
 [node name="Stul" type="MeshInstance3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -5.1, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.055847168, -5.1, -0.03983879)
 mesh = SubResource("BoxMesh_tipki")
 
 [node name="DiceEffects" type="Node3D" parent="."]
@@ -170,10 +175,6 @@ cup_shake_sounds = Array[AudioStream]([SubResource("AudioStreamSynchronized_a8y0
 
 [node name="GameManager" type="Node" parent="."]
 script = ExtResource("3_tbgi4")
-
-[node name="DiceCup" parent="." instance=ExtResource("11_ya4ey")]
-transform = Transform3D(60, 0, 0, 0, 60, 0, 0, 0, 60, 15, 0, 0)
-arc_height = 5.0
 
 [node name="UIEffectsManager" type="Node" parent="."]
 script = ExtResource("15_jbj1t")
@@ -191,3 +192,10 @@ position_x = 5.0
 position_y = 0.2
 position_z = 8.0
 rotation_x_deg = -90.0
+
+[node name="DiceCup" parent="." instance=ExtResource("17_0ld40")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 15, 0, 0)
+throw_duration = 1.5
+
+[node name="beer" parent="." instance=ExtResource("19_0ld40")]
+transform = Transform3D(-1.4914094, 0, -0.23621601, 0, 1.51, 0, 0.23621601, 0, -1.4914094, -16.22, 3.958, 10.083)

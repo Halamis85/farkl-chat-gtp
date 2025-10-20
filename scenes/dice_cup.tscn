@@ -1,9 +1,5 @@
 [gd_scene load_steps=2 format=3 uid="uid://br2ly543748s5"]
 
-[ext_resource type="PackedScene" uid="uid://caayhiwyisq3k" path="res://Addons/kelimek.glb" id="1_4t382"]
+[ext_resource type="PackedScene" uid="uid://cxynio0d2samn" path="res://Addons/textures/cup_dice.glb" id="1_4t382"]
 
 [node name="DiceCup" instance=ExtResource("1_4t382")]
-
-[node name="Rusty Tin Can_002" parent="." index="0"]
-transform = Transform3D(8, 0, 0, 0, 8, 0, 0, 0, 8, 0, 0, 0)
-layers = 8192

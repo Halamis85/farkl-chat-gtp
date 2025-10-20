@@ -91,9 +91,16 @@ func _on_select_pressed():
 	var selected = dice_manager.get_selected_dice()
 	if selected.size() > 0:
 		if game_manager.select_dice(selected):
-			# Přesuň kostky do banked
-			dice_manager.mark_dice_as_banked(selected)
+			# ⚠️ KONTROLA: Jen pokud to NENÍ Hot Hand!
+			if game_manager.get_available_dice() > 0:
+				# Normální bankování - přesuň kostky stranom
+				dice_manager.mark_dice_as_banked(selected)
+			# Pokud available_dice == 6, je to Hot Hand a kostky jsou už v kelímku!
+			
 			lbl_message.text = "✅ Vybrané kostky započítány!"
+			if game_manager.get_available_dice() == 6:
+				lbl_message.text = "🔥 HOT HAND! Všechny kostky zpět!"
+			
 			update_ui()
 	else:
 		lbl_message.text = "⚠️ Nevybral jsi žádné kostky!"

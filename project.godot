@@ -12,6 +12,7 @@ config_version=5
 
 config/name="FarklChatGTP"
 run/main_scene="uid://5aa55xos3rtk"
+run/enable_alt_space_menu=true
 config/features=PackedStringArray("4.5", "Forward Plus")
 config/icon="res://icon.svg"
 
@@ -29,3 +30,8 @@ window/stretch/mode="viewport"
 [dotnet]
 
 project/assembly_name="FarklChatGTP"
+
+[rendering]
+
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"

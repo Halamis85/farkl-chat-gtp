@@ -1,200 +1,255 @@
 extends Node3D
-#Dice_cup
+# dice_cup.gd - KOMPLETNÍ VERZE s camera integrací
+
 signal shake_complete()
-signal dice_released(release_position: Vector3)  # Posílá pozici kde vysypat
+signal dice_released(release_position: Vector3)
+signal shake_started()  # ⭐ NOVÝ signál
+signal dice_about_to_release()  # ⭐ NOVÝ signál
 
-@export var shake_duration: float = 1.0
-@export var shake_intensity: float = 0.3
-@export var throw_duration: float = 0.8
+var camera: Camera3D = null
+
+@export var shake_duration: float = 0.8
+@export var shake_intensity: float = 0.2
+@export var throw_duration: float = 1.2
 @export var shake_sounds: Array[AudioStream] = []
-@export var rest_position: Vector3 = Vector3(15, 0, 0)
-@export var throw_target: Vector3 = Vector3(0, 0, 0)
-@export var arc_height: float = 4.0
-@export_range(0.0, 1.0) var release_timing: float = 0.3  # Kdy vysypat kostky (0-1)
 
+var rest_position: Vector3
 var is_shaking: bool = false
 var audio_player: AudioStreamPlayer3D = null
 
 func _ready():
-	position = rest_position
+	# Ulož výchozí pozici
+	rest_position = global_position
 	rotation = Vector3.ZERO
 	
 	audio_player = AudioStreamPlayer3D.new()
 	add_child(audio_player)
 	
-	print("🥤 Kelímek připraven na pozici: ", rest_position)
+	# ⭐ PŘIPOJ KAMERU
+	if has_node("/root/Main/Camera3D"):
+		camera = get_node("/root/Main/Camera3D")
+		print("📷 Kelímek připojen ke kameře")
+	else:
+		print("⚠️ Kamera nebyla nalezena")
+	
+	print("🥤 Kelímek inicializován:")
+	print("   Rest pozice: ", rest_position)
+	print("   Scale: ", scale)
+
+# ========================================
+# HLAVNÍ FUNKCE - S CAMERA HOOKS
+# ========================================
 
 func shake_and_throw():
-	"""Jednoduchá profesionální animace: míchání -> oblouk -> vysypání"""
+	"""REALISTICKÝ HOD s camera synchronizací"""
 	if is_shaking:
 		return
 	
 	is_shaking = true
-	print("🎲 Začínám hod...")
+	print("🎲 Realistický hod začíná...")
+	
+	# ⭐ 1. NOTIFIKUJ KAMERU - začíná shake
+	shake_started.emit()
+	if camera:
+		camera.move_to_shake_view()  # Kamera sleduje kelímek
 	
 	play_shake_sound()
 	
-	# Fáze 1: Třesení na místě (15, 0, 0)
-	await shake_on_position()
+	# FÁZE 1: Třesení (0.8s)
+	await realistic_shake()
 	
-	# Fáze 2: Obloukový hod nad stůl
-	await arc_throw()
+	# ⭐ 2. NOTIFIKUJ KAMERU - kostky se chystají vypadnout
+	dice_about_to_release.emit()
 	
-	# Fáze 3: Návrat zpět
-	await return_to_rest()
+	# FÁZE 2: Oblouk + vysypání (1.2s)
+	await realistic_arc_throw()
+	
+	# ⭐ 3. KAMERA SHAKE při vysypání
+	if camera:
+		camera.add_camera_shake(0.2, 0.3)  # ← Opraveno: add_camera_shake místo play_shake
+	
+	# FÁZE 3: Návrat (0.8s)
+	await smooth_return()
 	
 	is_shaking = false
 	print("✅ Hod dokončen")
 
-func shake_on_position():
-	"""Promíchání kostek na místě (pozice 15, 0, 0)"""
-	print("🔄 Míchám kostky na místě...")
+# ========================================
+# FÁZE 1: REALISTICKÉ TŘESENÍ
+# ========================================
+
+func realistic_shake():
+	"""Lidské třesení - nepravidelné, s akcelerací"""
+	print("🔄 Třesu jako člověk...")
 	
-	var steps = 15
-	var step_time = shake_duration / steps
+	var shake_steps = 12
+	var step_time = shake_duration / shake_steps
 	
-	for i in range(steps):
-		var t = float(i) / steps
-		var freq = 25.0 + t * 10.0
+	for i in range(shake_steps):
+		var t = float(i) / shake_steps
 		
-		var offset_y = sin(t * freq) * shake_intensity
-		var offset_z = cos(t * freq * 0.8) * shake_intensity * 0.5
+		# Postupně zrychlující třesení
+		var intensity = shake_intensity * (0.3 + t * 0.7)
+		var freq = 15.0 + t * 20.0
 		
-		var rot_x = sin(t * freq * 1.2) * deg_to_rad(15)
-		var rot_z = cos(t * freq) * deg_to_rad(20)
+		# Nepravidelné offsety (simulace lidské ruky)
+		var noise_x = sin(t * freq + randf_range(-0.3, 0.3))
+		var noise_y = cos(t * freq * 1.3 + randf_range(-0.2, 0.2))
+		var noise_z = sin(t * freq * 0.7 + randf_range(-0.4, 0.4))
+		
+		var offset = Vector3(
+			noise_x * intensity * 0.3,
+			noise_y * intensity * 0.5,
+			noise_z * intensity * 0.4
+		)
+		
+		# Rotace kelímku při třesení
+		var rot = Vector3(
+			sin(t * freq * 1.1) * deg_to_rad(8),
+			cos(t * freq * 0.9) * deg_to_rad(5),
+			sin(t * freq * 1.4) * deg_to_rad(12)
+		)
 		
 		var tween = create_tween()
 		tween.set_parallel(true)
 		tween.set_trans(Tween.TRANS_SINE)
+		tween.set_ease(Tween.EASE_IN_OUT)
 		
-		tween.tween_property(
-			self,
-			"position",
-			rest_position + Vector3(0, offset_y, offset_z),
-			step_time
-		)
-		
-		tween.tween_property(
-			self,
-			"rotation",
-			Vector3(rot_x, 0, rot_z),
-			step_time
-		)
+		tween.tween_property(self, "position", rest_position + offset, step_time)
+		tween.tween_property(self, "rotation", rot, step_time)
 		
 		await tween.finished
 	
-	# Vrať na výchozí pozici před hodem
+	# Reset na výchozí
 	var reset = create_tween()
 	reset.set_parallel(true)
-	reset.tween_property(self, "position", rest_position, 0.1)
-	reset.tween_property(self, "rotation", Vector3.ZERO, 0.1)
+	reset.tween_property(self, "position", rest_position, 0.15)
+	reset.tween_property(self, "rotation", Vector3.ZERO, 0.15)
 	await reset.finished
 	
 	shake_complete.emit()
 
-# ⚠️ TOTO JE SPRÁVNÁ VERZE - EMITUJ PŘÍMO Z arc_throw()
-func arc_throw():
-	print("ZACATEK arc_throw")
+# ========================================
+# FÁZE 2: REALISTICKÝ OBLOUK + VYSYPÁNÍ
+# ========================================
+
+func realistic_arc_throw():
+	"""Plynulý lidský hod - oblouk s vysypáním NAD STŘEDEM stolu"""
+	print("🌊 Házím obloukem...")
 	
-	var start_pos = rest_position
-	var end_pos = throw_target + Vector3(5, 6.0, 0)
-	var mid_pos = (start_pos + end_pos) / 2.0
-	mid_pos.y += arc_height
+	# var _start = rest_position  # ← Přejmenováno kvůli warningu
+	var peak = Vector3(0, 5.5, 0)  # Vrchol NAD STŘEDEM stolu
+	var end = Vector3(0, 5, 0.2)
 	
-	# Faze 1: Oblouk nahoru
+	# === ČÁST A: Zdvih + otočení nahoru (0.6s) ===
 	var rise_tween = create_tween()
 	rise_tween.set_parallel(true)
-	rise_tween.set_trans(Tween.TRANS_QUAD)
+	rise_tween.set_trans(Tween.TRANS_CUBIC)
 	rise_tween.set_ease(Tween.EASE_OUT)
-	
-	rise_tween.tween_property(self, "position", mid_pos, throw_duration * 0.5)
+	rise_tween.tween_property(self, "global_position", peak, 0.6)
 	rise_tween.tween_property(
 		self,
 		"rotation",
-		Vector3(deg_to_rad(60), deg_to_rad(-10), deg_to_rad(40)),
-		throw_duration * 0.5
+		Vector3(deg_to_rad(120), deg_to_rad(-10), deg_to_rad(25)),
+		0.6
 	)
 	
 	await rise_tween.finished
 	
-	print("VRCHOL DOSAZEN na pozici: ", global_position)
+	# ⏰ KRITICKÉ: Počkej než se kelímek PLNĚ otočí
+	await get_tree().create_timer(0.15).timeout
 	
-	# EMITUJ SIGNAL IHNED NA VRCHOLU - PRED SESTUPEN!
-	var release_position = global_position
-	print("SIGNAL emituju z VRCHOLU: ", release_position)
-	dice_released.emit(release_position)
+	# === VYSYPÁNÍ NA VRCHOLU ===
+	var cup_opening_offset = Vector3(0,-0.5,0)
+	var release_pos = global_position + cup_opening_offset
 	
+	print("   Release pozice: ", release_pos)
+	
+	# ⭐ EMITUJ pozici pro DiceManager
+	dice_released.emit(release_pos)
+	
+	# ⭐ CAMERA FOV PUNCH při vysypání
+	if camera:
+		camera.punch_zoom(10.0, 0.2)
+	
+	# Flash efekt
 	if is_inside_tree():
 		call_deferred("create_pour_particles")
 	
-	# Faze 2: Klesani - TEPRVE TEĎKA!
+	# Pauza aby kostky vypadly
+	await get_tree().create_timer(0.45).timeout
+	
+	# === ČÁST B: Dohoz dolů (0.5s) ===
 	var pour_tween = create_tween()
 	pour_tween.set_parallel(true)
 	pour_tween.set_trans(Tween.TRANS_QUAD)
 	pour_tween.set_ease(Tween.EASE_IN)
 	
-	var pour_rotation = Vector3(deg_to_rad(140), deg_to_rad(-20), deg_to_rad(70))
-	
-	pour_tween.tween_property(self, "position", end_pos, throw_duration * 0.6)
-	pour_tween.tween_property(self, "rotation", pour_rotation, throw_duration * 0.6)
+	pour_tween.tween_property(self, "global_position", end, 1.0)
+	pour_tween.tween_property(
+		self,
+		"rotation",
+		Vector3(deg_to_rad(80), deg_to_rad(-10), deg_to_rad(20)),
+		0.5
+	)
 	
 	await pour_tween.finished
-	await get_tree().create_timer(0.2).timeout
-	
-	print("arc_throw HOTOVO")
 
-func return_to_rest():
-	"""Plynulý návrat na výchozí pozici"""
-	print("↩️ Vracím se...")
+# ========================================
+# FÁZE 3: PLYNULÝ NÁVRAT
+# ========================================
+
+func smooth_return():
+	"""Návrat na výchozí pozici"""
+	print("↩️ Vracím se na místo...")
 	
 	await get_tree().create_timer(0.3).timeout
 	
-	var current_pos = position
-	var mid_return = (current_pos + rest_position) / 2.0
-	mid_return.y += 3.0
+	var current = global_position
+	var mid_return = (current + rest_position) / 2.0
+	mid_return.y += 2.5
 	
-	# Fáze 1: Nahoru
-	var up_tween = create_tween()
-	up_tween.set_parallel(true)
-	up_tween.set_trans(Tween.TRANS_CUBIC)
-	up_tween.set_ease(Tween.EASE_OUT)
+	# Oblouk nahoru
+	var up = create_tween()
+	up.set_parallel(true)
+	up.set_trans(Tween.TRANS_CUBIC)
+	up.set_ease(Tween.EASE_OUT)
 	
-	up_tween.tween_property(self, "position", mid_return, 0.4)
-	up_tween.tween_property(self, "rotation", Vector3.ZERO, 0.4)
+	up.tween_property(self, "global_position", mid_return, 0.4)
+	up.tween_property(self, "rotation", Vector3.ZERO, 0.4)
 	
-	await up_tween.finished
+	await up.finished
 	
-	# Fáze 2: Dolů na místo
-	var down_tween = create_tween()
-	down_tween.set_parallel(true)
-	down_tween.set_trans(Tween.TRANS_CUBIC)
-	down_tween.set_ease(Tween.EASE_IN)
+	# Dopad dolů
+	var down = create_tween()
+	down.set_parallel(true)
+	down.set_trans(Tween.TRANS_CUBIC)
+	down.set_ease(Tween.EASE_IN)
 	
-	down_tween.tween_property(self, "position", rest_position, 0.4)
-	down_tween.tween_property(self, "rotation", Vector3.ZERO, 0.4)
+	down.tween_property(self, "global_position", rest_position, 0.35)
+	down.tween_property(self, "rotation", Vector3.ZERO, 0.35)
 	
-	await down_tween.finished
+	await down.finished
+	
+	# ⭐ KAMERA zpět na overview po dokončení
+	if camera:
+		await get_tree().create_timer(0.5).timeout
+		camera.move_to_overview()
 
-# ⚠️ TATO FUNKCE JE NYNÍ NEPOUŽITÁ - vše se dělá v arc_throw()
-# Ponechávám ji pro kompatibilitu (kdyby jsi ji měl někde jinde)
-func release_dice():
-	"""DEPRECATED - Nyní se používá přímý emit v arc_throw()"""
-	print("⚠️ release_dice() je zastaralá - použij emit přímo v arc_throw()")
-	dice_released.emit(global_position)
-	
-	if is_inside_tree():
-		call_deferred("create_pour_particles")
+# ========================================
+# POMOCNÉ FUNKCE
+# ========================================
 
 func create_pour_particles():
-	"""Flash efekt při vysypání"""
+	"""Flash při vysypání"""
 	if not is_inside_tree():
 		return
 	
 	var flash = OmniLight3D.new()
 	flash.light_color = Color(1.0, 0.95, 0.7)
-	flash.light_energy = 2.5
-	flash.omni_range = 5.0
-	flash.position = Vector3(0, -1, 0)
+	flash.light_energy = 2.0
+	flash.omni_range = 4.0
+	flash.position = Vector3(0, -0.5, 0)
 	
 	add_child(flash)
 	
@@ -206,8 +261,18 @@ func create_pour_particles():
 		flash.queue_free()
 
 func play_shake_sound():
-	"""Přehraj zvuk třesení"""
+	"""Zvuk třesení"""
 	if shake_sounds.size() > 0 and audio_player:
-		var random_sound = shake_sounds[randi() % shake_sounds.size()]
-		audio_player.stream = random_sound
+		var sound = shake_sounds[randi() % shake_sounds.size()]
+		audio_player.stream = sound
 		audio_player.play()
+
+# ========================================
+# DEBUG (volitelné)
+# ========================================
+
+func debug_throw():
+	"""Test hodu bez DiceManageru"""
+	print("🧪 DEBUG: Test throw")
+	await shake_and_throw()
+	
